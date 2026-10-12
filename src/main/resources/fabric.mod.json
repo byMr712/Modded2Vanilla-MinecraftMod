@@ -17,7 +17,7 @@
   "environment": "client",
   "entrypoints": {
     "client": [
-      "com.mr712.modded2vanilla.MrModded2Vanilla"
+      "com.mr712.modded2vanilla.MrModded2VanillaFabric"
     ]
   },
   "mixins": [
