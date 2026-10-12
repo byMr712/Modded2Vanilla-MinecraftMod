@@ -8,4 +8,4 @@ out/
 *.iws
 .vscode/
 *.DS_Store
-
+run/
