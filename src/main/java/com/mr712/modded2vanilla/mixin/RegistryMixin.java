@@ -20,7 +20,7 @@ public interface RegistryMixin {
     private static <V, T extends V> void onRegisterWithKey(Registry<V> registry, RegistryKey<V> key, T entry, CallbackInfoReturnable<T> cir) {
         if (UniversalRegistryBuffer.isBootstrappingVanilla() && key != null) {
             String namespace = key.getValue().getNamespace();
-            if (!"minecraft".equals(namespace)) {
+            if (!UniversalRegistryBuffer.isSystemOrVanillaNamespace(namespace)) {
                 T result = UniversalRegistryBuffer.deferOrRegister(registry, key, entry);
                 cir.setReturnValue(result);
             }
@@ -35,7 +35,7 @@ public interface RegistryMixin {
     private static <V, T extends V> void onRegisterWithId(Registry<V> registry, Identifier id, T entry, CallbackInfoReturnable<T> cir) {
         if (UniversalRegistryBuffer.isBootstrappingVanilla() && id != null) {
             String namespace = id.getNamespace();
-            if (!"minecraft".equals(namespace)) {
+            if (!UniversalRegistryBuffer.isSystemOrVanillaNamespace(namespace)) {
                 T result = UniversalRegistryBuffer.deferOrRegister(registry, id, entry);
                 cir.setReturnValue(result);
             }
