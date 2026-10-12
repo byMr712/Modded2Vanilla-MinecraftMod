@@ -31,6 +31,8 @@ public final class AdjustmentTracker {
         return className.startsWith("net.minecraft.") ||
                className.startsWith("com.mojang.") ||
                className.startsWith("net.fabricmc.") ||
+               className.startsWith("net.neoforged.") ||
+               className.startsWith("net.minecraftforge.") ||
                className.startsWith("java.") ||
                className.startsWith("javax.") ||
                className.startsWith("jdk.") ||
@@ -59,10 +61,13 @@ public final class AdjustmentTracker {
                "fabric-loader".equalsIgnoreCase(modId) ||
                "fabric".equalsIgnoreCase(modId) ||
                "fabric-api".equalsIgnoreCase(modId) ||
+               "neoforge".equalsIgnoreCase(modId) ||
+               "forge".equalsIgnoreCase(modId) ||
                "java".equalsIgnoreCase(modId) ||
                "brigadier".equalsIgnoreCase(modId) ||
                modId.startsWith("fabric-") ||
                modId.startsWith("fabric_") ||
+               modId.startsWith("neoforge_") ||
                modId.startsWith("com_mojang_") ||
                "modded2vanilla".equalsIgnoreCase(modId) ||
                "mrmodded2vanilla".equalsIgnoreCase(modId);
@@ -73,7 +78,7 @@ public final class AdjustmentTracker {
             return;
         }
         String jarName = resolveJarName(modId);
-        if (jarName.startsWith("fabric-loader") || jarName.startsWith("brigadier") || jarName.startsWith("fabric-api")) {
+        if (jarName.startsWith("fabric-loader") || jarName.startsWith("brigadier") || jarName.startsWith("fabric-api") || jarName.startsWith("neoforge") || jarName.startsWith("forge")) {
             return;
         }
         AFFECTED_JARS.add(jarName);
@@ -103,7 +108,7 @@ public final class AdjustmentTracker {
                     String path = url.getPath();
                     if (path.endsWith(".jar")) {
                         String fileName = java.nio.file.Paths.get(url.toURI()).getFileName().toString();
-                        if (!fileName.startsWith("fabric-loader") && !fileName.startsWith("brigadier") && !fileName.startsWith("fabric-api")) {
+                        if (!fileName.startsWith("fabric-loader") && !fileName.startsWith("brigadier") && !fileName.startsWith("fabric-api") && !fileName.startsWith("neoforge") && !fileName.startsWith("forge")) {
                             AFFECTED_JARS.add(fileName);
                             if (IsolatorState.isMultiplayer()) {
                                 printNoticeIfAny();
@@ -119,7 +124,7 @@ public final class AdjustmentTracker {
         // 2. Scan all loaded mod containers by package / modId matching
         for (ModContainer container : FabricLoader.getInstance().getAllMods()) {
             String modId = container.getMetadata().getId();
-            if ("minecraft".equals(modId) || "fabricloader".equals(modId) || "java".equals(modId)) {
+            if ("minecraft".equals(modId) || "fabricloader".equals(modId) || "java".equals(modId) || "neoforge".equals(modId) || "forge".equals(modId)) {
                 continue;
             }
             if (className.toLowerCase().contains(modId.toLowerCase().replace("-", "").replace("_", ""))) {

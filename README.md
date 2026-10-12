@@ -38,9 +38,11 @@ Modded2Vanilla автоматически берет на себя защиту 
 
 ## Установка
 
-1. Скачайте подходящую версию со страницы [GitHub Releases](https://github.com/byMr712/Modded2Vanilla-MinecraftMod/releases).
-2. Убедитесь, что установлен Fabric Loader и Fabric API.
-3. Поместите скачанный файл в папку `mods`.
+1. Скачайте подходящую версию (Fabric или NeoForge) со страницы [GitHub Releases](https://github.com/byMr712/Modded2Vanilla-MinecraftMod/releases).
+2. Требования в зависимости от загрузчика:
+   - Для Fabric: Fabric Loader и Fabric API.
+   - Для NeoForge: загрузчик NeoForge.
+3. Поместите скачанный `.jar` файл в папку `mods`.
 4. Запустите игру.
 
 ## Сборка из исходников
@@ -49,7 +51,7 @@ Modded2Vanilla автоматически берет на себя защиту 
 ```bash
 ./gradlew build
 ```
-Собранный файл будет находиться в папке `build/libs`.
+Собранные файлы для обоих загрузчиков (Fabric и NeoForge) будут находиться в папке `build/libs` и автоматически копироваться в `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
 
 ## Авторы и лицензия
 
