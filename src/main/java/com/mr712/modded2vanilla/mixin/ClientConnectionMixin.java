@@ -4,6 +4,7 @@ import com.mr712.modded2vanilla.MrModded2Vanilla;
 import com.mr712.modded2vanilla.state.IsolatorState;
 import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
 import io.netty.channel.ChannelFutureListener;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
@@ -31,9 +32,28 @@ public abstract class ClientConnectionMixin {
         cancellable = true
     )
     private void mrModded2Vanilla$filterOutgoingCustomPayload(Packet<?> packet, ChannelFutureListener callbacks, boolean flush, CallbackInfo ci) {
+        Minecraft client = Minecraft.getInstance();
+        if (client != null && client.hasSingleplayerServer()) {
+            return;
+        }
+
+        if (packet instanceof ServerboundSelectKnownPacks packsPacket) {
+            if (packsPacket.knownPacks() != null) {
+                List<KnownPack> filtered = packsPacket.knownPacks().stream()
+                    .filter(KnownPack::isVanilla)
+                    .toList();
+                if (filtered.size() != packsPacket.knownPacks().size()) {
+                    ci.cancel();
+                    this.send(new ServerboundSelectKnownPacks(filtered), callbacks, flush);
+                }
+            }
+            return;
+        }
+
         if (!IsolatorState.isIsolating()) {
             return;
         }
+
         if (packet instanceof ServerboundCustomPayloadPacket customPacket) {
             CustomPacketPayload payload = customPacket.payload();
             if (payload != null && payload.type() != null) {
@@ -42,16 +62,6 @@ public abstract class ClientConnectionMixin {
                     MrModded2Vanilla.LOGGER.debug("[MrModded2Vanilla] Suppressed unsupported outgoing CustomPayload channel: {}", channelId);
                     AdjustmentTracker.recordMod(channelId.getNamespace());
                     ci.cancel();
-                }
-            }
-        } else if (packet instanceof ServerboundSelectKnownPacks packsPacket) {
-            if (packsPacket.knownPacks() != null) {
-                List<KnownPack> filtered = packsPacket.knownPacks().stream()
-                    .filter(KnownPack::isVanilla)
-                    .toList();
-                if (filtered.size() != packsPacket.knownPacks().size()) {
-                    ci.cancel();
-                    this.send(new ServerboundSelectKnownPacks(filtered), callbacks, flush);
                 }
             }
         }
