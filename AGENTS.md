@@ -4,11 +4,13 @@
 - **Mod Name:** MrModded2Vanilla
 - **Display Name in Mod Menu:** `[MR] Modded2Vanilla`
 - **Target Minecraft Version:** 1.21.1
-- **Loader:** Fabric Loader (`0.19.5+` / `>=0.19.5`)
+- **Supported Loaders:** Fabric Loader (`0.19.5+` / `>=0.19.5`) and NeoForge (`>=1.0.0`)
 - **Mapping Stack:** Yarn `1.21.1+build.3:v2`
 - **Fabric API:** `0.116.17+1.21.1`
 - **Java Requirement:** Java 21 LTS
-- **Build Output:** `MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`
+- **Build Output:**
+  - Fabric: `MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`
+  - NeoForge: `MrModded2Vanilla-NeoForge-1.21.1-byMr712-v1.0.jar`
 - **Repository:** https://github.com/byMr712/Modded2Vanilla-MinecraftMod
 - **Author:** [Mr712](https://github.com/byMr712)
 - **License:** Apache-2.0
@@ -59,10 +61,29 @@
 
 ---
 
-## 4. Build Instructions
+## 4. Multi-Loader Porting Architecture: Fabric & NeoForge
+Supporting both Fabric and NeoForge loaders from a single codebase without external multi-loader frameworks:
+- `src/main/` contains universal mechanics isolator, registry buffer, snapshot, and Mixins.
+- `src/neoforge/` contains:
+  - `com.mr712.modded2vanilla.MrModded2VanillaNeoForge` entrypoint annotated with `@Mod("modded2vanilla")`.
+  - Compile-time `@Mod` annotation stub (`net.neoforged.fml.common.Mod`).
+  - Lightweight `net.fabricmc.api.*` and `net.fabricmc.loader.api.*` stubs providing safe fallbacks and querying NeoForge's `ModList` via reflection.
+  - `META-INF/neoforge.mods.toml` mod descriptor.
+- `jarNeoForge` task:
+  - Bundles compiled classes from `sourceSets.main` and `sourceSets.neoforge`.
+  - Excludes Fabric-only descriptors (`fabric.mod.json`) and the `@Mod` compile stub (`net/neoforged/**`).
+  - Emits `MrModded2Vanilla-NeoForge-<mc_version>-byMr712-v<mod_version>.jar`.
+- `remapJar` produces the pure Fabric JAR `MrModded2Vanilla-Fabric-<mc_version>-byMr712-v<mod_version>.jar`.
+- Post-build tasks automatically sync both artifacts to `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds\`.
+
+---
+
+## 5. Build Instructions
 - Prerequisites: Java 21 or Java 25 JDK installed.
 - Compile and build:
   ```bash
   ./gradlew build
   ```
-- Resulting jar: `build/libs/MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`.
+- Resulting jars:
+  - `build/libs/MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`
+  - `build/libs/MrModded2Vanilla-NeoForge-1.21.1-byMr712-v1.0.jar`.
