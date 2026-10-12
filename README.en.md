@@ -38,9 +38,11 @@ The mod requires zero manual setup and adjusts its behavior automatically:
 
 ## Installation
 
-1. Download the version you need from [GitHub Releases](https://github.com/byMr712/Modded2Vanilla-MinecraftMod/releases).
-2. Make sure Fabric Loader and Fabric API are installed.
-3. Place the downloaded file into your `mods` folder.
+1. Download the version you need (Fabric or NeoForge) from [GitHub Releases](https://github.com/byMr712/Modded2Vanilla-MinecraftMod/releases).
+2. Requirements depending on your loader:
+   - For Fabric: Fabric Loader and Fabric API.
+   - For NeoForge: NeoForge Loader.
+3. Place the downloaded `.jar` file into your `mods`.
 4. Launch the game.
 
 ## Building from Source
@@ -49,7 +51,7 @@ To compile the mod, run the following command in your terminal:
 ```bash
 ./gradlew build
 ```
-The compiled file will be saved in the `build/libs` directory.
+The compiled files for both loaders (Fabric and NeoForge) will be saved in the `build/libs` directory and automatically synced to `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
 
 ## Authors and License
 
