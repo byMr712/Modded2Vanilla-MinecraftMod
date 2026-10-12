@@ -107,17 +107,145 @@ processNeoforgeResources {
     }
 }
 
+def isYarnBranch = project.hasProperty('yarn_mappings') && !project.property('yarn_mappings').toString().trim().isEmpty()
+
+def remapIntermediaryJarToMojmap = { File jarFile, String mcVer ->
+    def loomCacheDir = new File(gradle.gradleUserHomeDir, "caches/fabric-loom/${mcVer}")
+    def tinyFile = null
+    if (loomCacheDir.exists()) {
+        loomCacheDir.eachFileRecurse { f ->
+            if (f.name == "mappings.tiny" && f.parentFile.name.startsWith("loom.mappings.")) {
+                tinyFile = f
+            }
+        }
+    }
+    if (tinyFile == null || !tinyFile.exists()) {
+        throw new GradleException("Could not find Mojmap mappings.tiny in ${loomCacheDir}")
+    }
+
+    def classMap = [:]
+    def shortClassMap = [:]
+    def methodMap = [:]
+    def fieldMap = [:]
+    tinyFile.eachLine("UTF-8") { line ->
+        def t = line.trim().split("\t")
+        if (t[0] == "c" && t.length >= 3 && t[1].startsWith("net/minecraft/class_")) {
+            classMap[t[1]] = t[2]
+            def iParts = t[1].split('\\$')
+            def mParts = t[2].split('\\$')
+            if (iParts.length == mParts.length) {
+                for (int i = 0; i < iParts.length; i++) {
+                    def iShort = iParts[i].contains("/") ? iParts[i].substring(iParts[i].lastIndexOf("/") + 1) : iParts[i]
+                    def mShort = mParts[i].contains("/") ? mParts[i].substring(mParts[i].lastIndexOf("/") + 1) : mParts[i]
+                    shortClassMap[iShort] = mShort
+                }
+            }
+        } else if (t[0] == "m" && t.length >= 4 && (t[2].startsWith("method_") || t[2].startsWith("comp_"))) {
+            methodMap[t[2]] = t[3]
+        } else if (t[0] == "f" && t.length >= 4 && t[2].startsWith("field_")) {
+            fieldMap[t[2]] = t[3]
+        }
+    }
+
+    def remapString = { String str ->
+        if (!str.contains("class_") && !str.contains("method_") && !str.contains("comp_") && !str.contains("field_")) {
+            return str
+        }
+        String res = str.replaceAll(/net\/minecraft\/class_\d+(?:\$class_\d+)*/) { m -> classMap.getOrDefault(m, m) }
+        res = res.replaceAll(/\bclass_\d+\b/) { m -> shortClassMap.getOrDefault(m, m) }
+        res = res.replaceAll(/\b(?:method|comp)_\d+\b/) { m -> methodMap.getOrDefault(m, m) }
+        res = res.replaceAll(/\bfield_\d+\b/) { m -> fieldMap.getOrDefault(m, m) }
+        return res
+    }
+
+    def remapClassBytes = { byte[] bytes ->
+        def dis = new java.io.DataInputStream(new java.io.ByteArrayInputStream(bytes))
+        def baos = new java.io.ByteArrayOutputStream(bytes.length + 1024)
+        def dos = new java.io.DataOutputStream(baos)
+        dos.writeInt(dis.readInt())
+        dos.writeShort(dis.readUnsignedShort())
+        dos.writeShort(dis.readUnsignedShort())
+        int cpCount = dis.readUnsignedShort()
+        dos.writeShort(cpCount)
+        for (int i = 1; i < cpCount; i++) {
+            int tag = dis.readUnsignedByte()
+            dos.writeByte(tag)
+            switch (tag) {
+                case 1:
+                    int len = dis.readUnsignedShort()
+                    byte[] utfBytes = new byte[len]
+                    dis.readFully(utfBytes)
+                    String mapped = remapString(new String(utfBytes, java.nio.charset.StandardCharsets.UTF_8))
+                    byte[] outBytes = mapped.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                    dos.writeShort(outBytes.length)
+                    dos.write(outBytes)
+                    break
+                case 3: case 4: case 9: case 10: case 11: case 12: case 17: case 18:
+                    byte[] b4 = new byte[4]; dis.readFully(b4); dos.write(b4); break
+                case 5: case 6:
+                    byte[] b8 = new byte[8]; dis.readFully(b8); dos.write(b8); i++; break
+                case 7: case 8: case 16: case 19: case 20:
+                    byte[] b2 = new byte[2]; dis.readFully(b2); dos.write(b2); break
+                case 15:
+                    byte[] b3 = new byte[3]; dis.readFully(b3); dos.write(b3); break
+                default:
+                    throw new GradleException("Unknown constant pool tag: " + tag)
+            }
+        }
+        byte[] rest = dis.readAllBytes()
+        dos.write(rest)
+        dos.flush()
+        return baos.toByteArray()
+    }
+
+    File tempJar = new File(jarFile.parentFile, jarFile.name + ".tmp")
+    new java.util.zip.ZipFile(jarFile).withCloseable { zf ->
+        new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(tempJar)).withCloseable { zos ->
+            def entries = zf.entries()
+            while (entries.hasMoreElements()) {
+                def entry = entries.nextElement()
+                byte[] data = zf.getInputStream(entry).bytes
+                if (entry.name.endsWith(".class") && entry.name.startsWith("com/mr712/")) {
+                    data = remapClassBytes(data)
+                }
+                def newEntry = new java.util.zip.ZipEntry(entry.name)
+                newEntry.time = entry.time
+                zos.putNextEntry(newEntry)
+                zos.write(data)
+                zos.closeEntry()
+            }
+        }
+    }
+    if (!jarFile.delete() || !tempJar.renameTo(jarFile)) {
+        java.nio.file.Files.move(tempJar.toPath(), jarFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 task jarNeoForge(type: Jar) {
     dependsOn compileNeoforgeJava, processNeoforgeResources
+    if (isYarnBranch) {
+        dependsOn remapJar
+    }
     archiveFileName = "${project.archives_base_name.replace('-Fabric-', '-NeoForge-')}.jar"
     destinationDirectory = layout.buildDirectory.dir("libs")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from(sourceSets.main.output) {
-        exclude "fabric.mod.json"
+    if (isYarnBranch) {
+        from({ zipTree(remapJar.archiveFile) }) {
+            exclude "fabric.mod.json"
+            exclude "*-refmap.json"
+            exclude "net/**"
+            exclude "com/mr712/modded2vanilla/MrModded2VanillaFabric*.class"
+        }
+    } else {
+        from(sourceSets.main.output) {
+            exclude "fabric.mod.json"
+            exclude "net/**"
+            exclude "com/mr712/modded2vanilla/MrModded2VanillaFabric*.class"
+        }
     }
     from(sourceSets.neoforge.output) {
-        exclude "net/neoforged/**"
+        exclude "net/**"
     }
     from("src/main/resources") {
         include "assets/**"
@@ -125,6 +253,12 @@ task jarNeoForge(type: Jar) {
         include "modded2vanilla.mixins.json"
     }
     from("LICENSE")
+
+    doLast {
+        if (isYarnBranch) {
+            remapIntermediaryJarToMojmap(archiveFile.get().asFile, project.minecraft_version.toString())
+        }
+    }
 }
 
 build.dependsOn(jarNeoForge)
