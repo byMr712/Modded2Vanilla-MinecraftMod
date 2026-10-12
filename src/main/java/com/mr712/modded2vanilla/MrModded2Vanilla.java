@@ -13,8 +13,11 @@ public final class MrModded2Vanilla implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         LOGGER.info("MrModded2Vanilla loaded. Modded DataTrackers will be isolated on vanilla/multiplayer servers.");
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            AdjustmentTracker.printStartupNoticeIfAny();
-        });
+        try {
+            ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+                AdjustmentTracker.printStartupNoticeIfAny();
+            });
+        } catch (Throwable ignored) {
+        }
     }
 }
