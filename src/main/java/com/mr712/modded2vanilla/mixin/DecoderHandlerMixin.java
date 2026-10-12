@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.PacketDecoder;
 import net.minecraft.network.ProtocolInfo;
+import net.minecraft.network.ProtocolSwapHandler;
 import net.minecraft.network.protocol.Packet;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,6 +46,7 @@ public abstract class DecoderHandlerMixin {
                 buf.skipBytes(extra);
             }
             objects.add(packet);
+            ProtocolSwapHandler.handleInboundTerminalPacket(ctx, packet);
         } catch (Throwable t) {
             MrModded2Vanilla.LOGGER.warn("[MrModded2Vanilla] Suppressed packet decode error in network stream: {}", t.getMessage());
             // Skip the remaining bytes for this frame to prevent crashing channel
