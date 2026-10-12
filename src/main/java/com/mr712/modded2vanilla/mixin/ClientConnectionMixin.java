@@ -3,9 +3,9 @@ package com.mr712.modded2vanilla.mixin;
 import com.mr712.modded2vanilla.MrModded2Vanilla;
 import com.mr712.modded2vanilla.state.IsolatorState;
 import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
+import io.netty.channel.ChannelFutureListener;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.common.CustomPayloadC2SPacket;
@@ -24,14 +24,14 @@ import java.util.List;
 public abstract class ClientConnectionMixin {
 
     @Shadow
-    public abstract void send(Packet<?> packet, PacketCallbacks callbacks, boolean flush);
+    public abstract void send(Packet<?> packet, ChannelFutureListener callbacks, boolean flush);
 
     @Inject(
-        method = "send(Lnet/minecraft/network/packet/Packet;Lnet/minecraft/network/PacketCallbacks;Z)V",
+        method = "send(Lnet/minecraft/network/packet/Packet;Lio/netty/channel/ChannelFutureListener;Z)V",
         at = @At("HEAD"),
         cancellable = true
     )
-    private void mrModded2Vanilla$filterOutgoingCustomPayload(Packet<?> packet, PacketCallbacks callbacks, boolean flush, CallbackInfo ci) {
+    private void mrModded2Vanilla$filterOutgoingCustomPayload(Packet<?> packet, ChannelFutureListener callbacks, boolean flush, CallbackInfo ci) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client != null && client.isInSingleplayer()) {
             return;
