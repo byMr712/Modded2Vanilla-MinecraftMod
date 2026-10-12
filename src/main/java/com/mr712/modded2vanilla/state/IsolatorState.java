@@ -55,6 +55,9 @@ public final class IsolatorState {
         if (channelId == null || "minecraft".equals(channelId.getNamespace())) {
             return true;
         }
+        if (isModdedServer()) {
+            return true;
+        }
         try {
             Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
             return (boolean) cpn.getMethod("canSend", channelId.getClass()).invoke(null, channelId);
