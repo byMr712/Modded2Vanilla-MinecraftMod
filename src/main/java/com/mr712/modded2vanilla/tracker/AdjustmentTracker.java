@@ -2,8 +2,6 @@ package com.mr712.modded2vanilla.tracker;
 
 import com.mr712.modded2vanilla.MrModded2Vanilla;
 import com.mr712.modded2vanilla.state.IsolatorState;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
 
 import java.nio.file.Path;
 import java.util.Collections;
@@ -121,36 +119,112 @@ public final class AdjustmentTracker {
         } catch (Throwable ignored) {
         }
 
-        // 2. Scan all loaded mod containers by package / modId matching
-        for (ModContainer container : FabricLoader.getInstance().getAllMods()) {
-            String modId = container.getMetadata().getId();
-            if ("minecraft".equals(modId) || "fabricloader".equals(modId) || "java".equals(modId) || "neoforge".equals(modId) || "forge".equals(modId)) {
-                continue;
+        // 2. Scan all loaded mod containers by package / modId matching (Fabric or NeoForge)
+        String lowerClass = className.toLowerCase();
+        try {
+            Class<?> loaderClass = Class.forName("net.fabricmc.loader.api.FabricLoader");
+            Object loader = loaderClass.getMethod("getInstance").invoke(null);
+            Iterable<?> containers = (Iterable<?>) loaderClass.getMethod("getAllMods").invoke(loader);
+            for (Object container : containers) {
+                Object metadata = container.getClass().getMethod("getMetadata").invoke(container);
+                String modId = (String) metadata.getClass().getMethod("getId").invoke(metadata);
+                if ("minecraft".equals(modId) || "fabricloader".equals(modId) || "java".equals(modId) || "neoforge".equals(modId) || "forge".equals(modId)) {
+                    continue;
+                }
+                if (lowerClass.contains(modId.toLowerCase().replace("-", "").replace("_", ""))) {
+                    recordMod(modId);
+                    return;
+                }
             }
-            if (className.toLowerCase().contains(modId.toLowerCase().replace("-", "").replace("_", ""))) {
-                recordMod(modId);
-                return;
-            }
+            recordMod(className);
+            return;
+        } catch (Throwable ignored) {
         }
+
+        try {
+            Class<?> modListClass = Class.forName("net.neoforged.fml.ModList");
+            Object modList = modListClass.getMethod("get").invoke(null);
+            if (modList != null) {
+                List<?> modFiles = (List<?>) modListClass.getMethod("getModFiles").invoke(modList);
+                for (Object modFileInfo : modFiles) {
+                    List<?> modInfos = (List<?>) modFileInfo.getClass().getMethod("getMods").invoke(modFileInfo);
+                    for (Object modInfo : modInfos) {
+                        String modId = (String) modInfo.getClass().getMethod("getModId").invoke(modInfo);
+                        if ("minecraft".equals(modId) || "fabricloader".equals(modId) || "java".equals(modId) || "neoforge".equals(modId) || "forge".equals(modId)) {
+                            continue;
+                        }
+                        if (lowerClass.contains(modId.toLowerCase().replace("-", "").replace("_", ""))) {
+                            recordMod(modId);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
         recordMod(className);
     }
 
     public static String resolveJarName(String modId) {
-        Optional<ModContainer> containerOpt = FabricLoader.getInstance().getModContainer(modId);
-        if (containerOpt.isPresent()) {
-            ModContainer container = containerOpt.get();
-            try {
-                List<Path> paths = container.getOrigin().getPaths();
-                if (paths != null && !paths.isEmpty()) {
-                    String fileName = paths.get(0).getFileName().toString();
-                    if (fileName.endsWith(".jar")) {
-                        return fileName;
+        try {
+            Class<?> loaderClass = Class.forName("net.fabricmc.loader.api.FabricLoader");
+            Object loader = loaderClass.getMethod("getInstance").invoke(null);
+            Optional<?> containerOpt = (Optional<?>) loaderClass.getMethod("getModContainer", String.class).invoke(loader, modId);
+            if (containerOpt.isPresent()) {
+                Object container = containerOpt.get();
+                try {
+                    Object origin = container.getClass().getMethod("getOrigin").invoke(container);
+                    @SuppressWarnings("unchecked")
+                    List<Path> paths = (List<Path>) origin.getClass().getMethod("getPaths").invoke(origin);
+                    if (paths != null && !paths.isEmpty()) {
+                        String fileName = paths.get(0).getFileName().toString();
+                        if (fileName.endsWith(".jar")) {
+                            return fileName;
+                        }
+                    }
+                } catch (Throwable ignored) {
+                }
+                Object metadata = container.getClass().getMethod("getMetadata").invoke(container);
+                String id = (String) metadata.getClass().getMethod("getId").invoke(metadata);
+                Object version = metadata.getClass().getMethod("getVersion").invoke(metadata);
+                String verStr = (String) version.getClass().getMethod("getFriendlyString").invoke(version);
+                return id + "-" + verStr + ".jar";
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            Class<?> modListClass = Class.forName("net.neoforged.fml.ModList");
+            Object modList = modListClass.getMethod("get").invoke(null);
+            if (modList != null) {
+                List<?> modFiles = (List<?>) modListClass.getMethod("getModFiles").invoke(modList);
+                for (Object modFileInfo : modFiles) {
+                    Path filePath = null;
+                    try {
+                        Object fileObj = modFileInfo.getClass().getMethod("getFile").invoke(modFileInfo);
+                        filePath = (Path) fileObj.getClass().getMethod("getFilePath").invoke(fileObj);
+                    } catch (Throwable ignored) {
+                    }
+                    List<?> modInfos = (List<?>) modFileInfo.getClass().getMethod("getMods").invoke(modFileInfo);
+                    for (Object modInfo : modInfos) {
+                        String id = (String) modInfo.getClass().getMethod("getModId").invoke(modInfo);
+                        if (modId.equals(id)) {
+                            if (filePath != null) {
+                                String fileName = filePath.getFileName().toString();
+                                if (fileName.endsWith(".jar")) {
+                                    return fileName;
+                                }
+                            }
+                            Object versionObj = modInfo.getClass().getMethod("getVersion").invoke(modInfo);
+                            return id + "-" + (versionObj != null ? versionObj.toString() : "1.0") + ".jar";
+                        }
                     }
                 }
-            } catch (Throwable ignored) {
             }
-            return container.getMetadata().getId() + "-" + container.getMetadata().getVersion().getFriendlyString() + ".jar";
+        } catch (Throwable ignored) {
         }
+
         return modId.endsWith(".jar") ? modId : (modId + ".jar");
     }
 
