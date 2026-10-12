@@ -1,6 +1,5 @@
 package com.mr712.modded2vanilla.state;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.network.ServerInfo;
@@ -57,7 +56,8 @@ public final class IsolatorState {
             return true;
         }
         try {
-            return ClientPlayNetworking.canSend(channelId);
+            Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
+            return (boolean) cpn.getMethod("canSend", channelId.getClass()).invoke(null, channelId);
         } catch (Throwable ignored) {
             return false;
         }
@@ -72,10 +72,12 @@ public final class IsolatorState {
             return true;
         }
         try {
-            Set<Identifier> sendable = ClientPlayNetworking.getSendable();
+            Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
+            @SuppressWarnings("unchecked")
+            Set<?> sendable = (Set<?>) cpn.getMethod("getSendable").invoke(null);
             if (sendable != null && !sendable.isEmpty()) {
-                for (Identifier id : sendable) {
-                    if (!"minecraft".equals(id.getNamespace())) {
+                for (Object idObj : sendable) {
+                    if (idObj != null && !"minecraft".equals(idObj.toString().split(":")[0])) {
                         return true;
                     }
                 }

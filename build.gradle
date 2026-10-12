@@ -80,20 +80,92 @@ tasks.matching { it.name == 'sourcesJar' || it.name == 'remapSourcesJar' || it.n
     enabled = false
 }
 
-def launcherModsDir = file("E:/ATLauncher/instances/FabulouslyOptimizedFPStest1214/mods")
-
-tasks.register('copyToLauncher', Copy) {
-    onlyIf {
-        launcherModsDir.exists()
+sourceSets {
+    neoforge {
+        java {
+            srcDirs = ['src/neoforge/java']
+        }
+        resources {
+            srcDirs = ['src/neoforge/resources']
+        }
+        compileClasspath += sourceSets.main.output + configurations.compileClasspath
+        runtimeClasspath += sourceSets.main.output + configurations.runtimeClasspath
     }
+}
+
+processNeoforgeResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+
+    filesMatching("META-INF/neoforge.mods.toml") {
+        expand "version": project.version, "minecraft_version": project.minecraft_version
+    }
+}
+
+task jarNeoForge(type: Jar) {
+    dependsOn compileNeoforgeJava, processNeoforgeResources
+    archiveFileName = "${project.archives_base_name.replace('-Fabric-', '-NeoForge-')}.jar"
+    destinationDirectory = layout.buildDirectory.dir("libs")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(sourceSets.main.output) {
+        exclude "fabric.mod.json"
+    }
+    from(sourceSets.neoforge.output) {
+        exclude "net/neoforged/**"
+    }
+    from("src/main/resources") {
+        include "assets/**"
+        include "data/**"
+        include "modded2vanilla.mixins.json"
+    }
+    from("LICENSE")
+}
+
+build.dependsOn(jarNeoForge)
+
+def allBuildsDir = file("C:/Users/Mr712/Documents/MrModded2Vanilla_all_builds")
+tasks.register('copyToAllBuildsFabric', Copy) {
     dependsOn remapJar
     from remapJar.archiveFile
-    into launcherModsDir
+    into file("${allBuildsDir}/Fabric")
     doLast {
-        println ">>> Copied ${remapJar.archiveFileName.get()} to ATLauncher instance mods folder!"
+        copy {
+            from remapJar.archiveFile
+            into allBuildsDir
+        }
+        println ">>> Copied ${remapJar.archiveFileName.get()} to ${allBuildsDir.absolutePath}/Fabric!"
     }
 }
 
-if (launcherModsDir.exists()) {
-    build.finalizedBy(copyToLauncher)
+tasks.register('copyToAllBuildsNeoForge', Copy) {
+    dependsOn jarNeoForge
+    from jarNeoForge.archiveFile
+    into file("${allBuildsDir}/NeoForge")
+    doLast {
+        copy {
+            from jarNeoForge.archiveFile
+            into allBuildsDir
+        }
+        println ">>> Copied ${jarNeoForge.archiveFileName.get()} to ${allBuildsDir.absolutePath}/NeoForge!"
+    }
 }
+
+task copyToAllBuilds {
+    dependsOn copyToAllBuildsFabric, copyToAllBuildsNeoForge
+}
+
+build.finalizedBy(copyToAllBuilds)
+
+def launcherNeoForgeDir = file("C:/Users/Mr712/AppData/Roaming/ATLauncher/instances/Minecraft${project.minecraft_version.replace('.', '')}withNeoForge/mods")
+if (launcherNeoForgeDir.exists()) {
+    tasks.register('copyToLauncherNeoForge', Copy) {
+        dependsOn jarNeoForge
+        from jarNeoForge.archiveFile
+        into launcherNeoForgeDir
+        doLast {
+            println ">>> Copied ${jarNeoForge.archiveFileName.get()} to ATLauncher NeoForge instance mods folder!"
+        }
+    }
+    build.finalizedBy(copyToLauncherNeoForge)
+}
