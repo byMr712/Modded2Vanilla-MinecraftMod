@@ -1,17 +1,15 @@
 package com.mr712.modded2vanilla;
 
 import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
-import net.fabricmc.api.ClientModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Proxy;
 
-public final class MrModded2Vanilla implements ClientModInitializer {
+public final class MrModded2Vanilla {
     public static final String MOD_ID = "modded2vanilla";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    @Override
     public void onInitializeClient() {
         LOGGER.info("MrModded2Vanilla loaded. Modded DataTrackers will be isolated on vanilla/multiplayer servers.");
         try {
