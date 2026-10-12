@@ -26,6 +26,10 @@ public final class UniversalRegistryBuffer {
         return bootstrappingVanilla && !flushed;
     }
 
+    public static boolean isSystemOrVanillaNamespace(String namespace) {
+        return "minecraft".equals(namespace) || "brigadier".equals(namespace);
+    }
+
     @SuppressWarnings("unchecked")
     public static synchronized <V, T extends V> T deferOrRegister(Registry<V> registry, ResourceKey<V> key, T entry) {
         if (!isBootstrappingVanilla()) {
@@ -33,7 +37,7 @@ public final class UniversalRegistryBuffer {
         }
 
         String namespace = key.identifier().getNamespace();
-        if ("minecraft".equals(namespace)) {
+        if (isSystemOrVanillaNamespace(namespace)) {
             return Registry.register(registry, key, entry);
         }
 
@@ -49,7 +53,7 @@ public final class UniversalRegistryBuffer {
         }
 
         String namespace = id.getNamespace();
-        if ("minecraft".equals(namespace)) {
+        if (isSystemOrVanillaNamespace(namespace)) {
             return Registry.register(registry, id, entry);
         }
 
