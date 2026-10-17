@@ -151,10 +151,10 @@ def remapIntermediaryJarToMojmap = { File jarFile, String mcVer ->
         if (!str.contains("class_") && !str.contains("method_") && !str.contains("comp_") && !str.contains("field_")) {
             return str
         }
-        String res = str.replaceAll(/net\/minecraft\/class_\d+(?:\$class_\d+)*/) { m -> classMap.getOrDefault(m, m) }
-        res = res.replaceAll(/\bclass_\d+\b/) { m -> shortClassMap.getOrDefault(m, m) }
-        res = res.replaceAll(/\b(?:method|comp)_\d+\b/) { m -> methodMap.getOrDefault(m, m) }
-        res = res.replaceAll(/\bfield_\d+\b/) { m -> fieldMap.getOrDefault(m, m) }
+        String res = str.replaceAll('net/minecraft/class_\\d+(?:\\$class_\\d+)*') { m -> classMap.getOrDefault(m, m) }
+        res = res.replaceAll('\\bclass_\\d+\\b') { m -> shortClassMap.getOrDefault(m, m) }
+        res = res.replaceAll('\\b(?:method|comp)_\\d+\\b') { m -> methodMap.getOrDefault(m, m) }
+        res = res.replaceAll('\\bfield_\\d+\\b') { m -> fieldMap.getOrDefault(m, m) }
         return res
     }
 
