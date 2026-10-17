@@ -1,6 +1,7 @@
 param(
     [string]$Server = "example-server.com",
-    [int]$TimeoutSeconds = 40
+    [int]$TimeoutSeconds = 40,
+    [switch]$SkipModCopy
 )
 
 $projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
@@ -21,29 +22,58 @@ if (Test-Path $propsPath) {
     }
 }
 
-# Clean stale mods before loading test mods
-if (Test-Path $runModsDir) {
-    Remove-Item "$runModsDir/*.jar" -Force -ErrorAction SilentlyContinue
-} else {
-    New-Item -ItemType Directory -Force -Path $runModsDir | Out-Null
-}
-
-# Automatically copy custom test mods provided in test_mods/<version>/fabric or test_mods/fabric
-$modsSource = if (Test-Path "$projectRoot/test_mods/$McVersion/fabric") {
-    "$projectRoot/test_mods/$McVersion/fabric"
-} elseif (Test-Path $testModsFabric) {
-    $testModsFabric
-} else {
-    $null
-}
-
-if ($modsSource) {
-    $customMods = Get-ChildItem $modsSource -Filter "*.jar" -ErrorAction SilentlyContinue
-    if ($customMods.Count -gt 0) {
-        foreach ($m in $customMods) {
-            Copy-Item $m.FullName -Destination $runModsDir -Force
+function Adapt-DevJar($jarPath) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+    $zip = [System.IO.Compression.ZipFile]::Open($jarPath, [System.IO.Compression.ZipArchiveMode]::Update)
+    try {
+        $targets = @($zip.Entries | Where-Object { $_.Name -match "\.(accesswidener|classtweaker)$" })
+        foreach ($entry in $targets) {
+            $sr = New-Object System.IO.StreamReader($entry.Open())
+            $text = $sr.ReadToEnd()
+            $sr.Close()
+            if ($text -match "(accessWidener|classTweaker)\s+(v\d+)\s+official") {
+                $newText = [regex]::Replace($text, "(accessWidener|classTweaker)(\s+v\d+\s+)official", '${1}${2}named')
+                $entryName = $entry.FullName
+                $entry.Delete()
+                $newEntry = $zip.CreateEntry($entryName)
+                $sw = New-Object System.IO.StreamWriter($newEntry.Open())
+                $sw.Write($newText)
+                $sw.Flush()
+                $sw.Close()
+            }
         }
-        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSource into run/mods"
+    } finally {
+        $zip.Dispose()
+    }
+}
+
+if (-not $SkipModCopy) {
+    # Clean stale mods before loading test mods
+    if (Test-Path $runModsDir) {
+        Remove-Item "$runModsDir/*.jar" -Force -ErrorAction SilentlyContinue
+    } else {
+        New-Item -ItemType Directory -Force -Path $runModsDir | Out-Null
+    }
+
+    # Automatically copy custom test mods provided in test_mods/<version>/fabric or test_mods/fabric
+    $modsSource = if (Test-Path "$projectRoot/test_mods/$McVersion/fabric") {
+        "$projectRoot/test_mods/$McVersion/fabric"
+    } elseif (Test-Path $testModsFabric) {
+        $testModsFabric
+    } else {
+        $null
+    }
+
+    if ($modsSource) {
+        $customMods = Get-ChildItem $modsSource -Filter "*.jar" -ErrorAction SilentlyContinue
+        if ($customMods.Count -gt 0) {
+            foreach ($m in $customMods) {
+                $dest = Join-Path $runModsDir $m.Name
+                Copy-Item $m.FullName -Destination $dest -Force
+                Adapt-DevJar $dest
+            }
+            Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSource into run/mods"
+        }
     }
 }
 

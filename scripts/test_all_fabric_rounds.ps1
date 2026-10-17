@@ -56,6 +56,31 @@ if (-not (Test-Path $runMods)) {
 
 $results = @()
 
+function Adapt-DevJar($jarPath) {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
+    $zip = [System.IO.Compression.ZipFile]::Open($jarPath, [System.IO.Compression.ZipArchiveMode]::Update)
+    try {
+        $targets = @($zip.Entries | Where-Object { $_.Name -match "\.(accesswidener|classtweaker)$" })
+        foreach ($entry in $targets) {
+            $sr = New-Object System.IO.StreamReader($entry.Open())
+            $text = $sr.ReadToEnd()
+            $sr.Close()
+            if ($text -match "(accessWidener|classTweaker)\s+(v\d+)\s+official") {
+                $newText = [regex]::Replace($text, "(accessWidener|classTweaker)(\s+v\d+\s+)official", '${1}${2}named')
+                $entryName = $entry.FullName
+                $entry.Delete()
+                $newEntry = $zip.CreateEntry($entryName)
+                $sw = New-Object System.IO.StreamWriter($newEntry.Open())
+                $sw.Write($newText)
+                $sw.Flush()
+                $sw.Close()
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+}
+
 foreach ($roundItem in $rounds) {
     $r = $roundItem.Round
     $desc = $roundItem.Desc
@@ -64,14 +89,16 @@ foreach ($roundItem in $rounds) {
     Write-Output "========================================================"
 
     if ($roundItem.JarPath -and (Test-Path $roundItem.JarPath)) {
-        Copy-Item $roundItem.JarPath -Destination $runMods -Force
+        $destJar = Join-Path $runMods (Split-Path $roundItem.JarPath -Leaf)
+        Copy-Item $roundItem.JarPath -Destination $destJar -Force
+        Adapt-DevJar $destJar
     }
     $loadedMods = (Get-ChildItem $runMods -Filter "*.jar" -ErrorAction SilentlyContinue).Name -join ", "
     if (-not $loadedMods) { $loadedMods = "None (pure isolation)" }
     Write-Output "Currently active mods in run/mods: $loadedMods"
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45
+    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45 -SkipModCopy
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
