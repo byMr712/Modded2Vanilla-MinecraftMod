@@ -138,7 +138,7 @@ if (Test-Path $jsonPath) {
         if ($item -is [string]) {
             if ($hasP) {
                 $hasP = $false
-                $parts = ($item -split '[\$\{classpath_separator\};:]') | Where-Object { $_ -match "\.jar$" }
+                $parts = ($item -split '\$\{classpath_separator\}|[;:]') | Where-Object { $_ -match '\.jar$' }
                 $modulePathJars += $parts
             } elseif ($item -eq "-p" -or $item -eq "--module-path") {
                 $hasP = $true
