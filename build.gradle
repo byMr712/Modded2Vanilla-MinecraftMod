@@ -137,49 +137,59 @@ task jarNeoForge(type: Jar) {
 
 build.dependsOn(jarNeoForge)
 
-def allBuildsDir = file("C:/Users/Mr712/Documents/MrModded2Vanilla_all_builds")
-tasks.register('copyToAllBuildsFabric', Copy) {
-    dependsOn remapJar
-    from remapJar.archiveFile
-    into file("${allBuildsDir}/Fabric")
-    doLast {
-        copy {
-            from remapJar.archiveFile
-            into allBuildsDir
+def userHome = System.getProperty("user.home")
+def allBuildsDir = System.getenv("ALL_BUILDS_DIR") ? file(System.getenv("ALL_BUILDS_DIR")) : file("${userHome}/Documents/MrModded2Vanilla_all_builds")
+if (allBuildsDir.exists()) {
+    tasks.register('copyToAllBuildsFabric', Copy) {
+        dependsOn remapJar
+        from remapJar.archiveFile
+        into file("${allBuildsDir}/Fabric")
+        doLast {
+            copy {
+                from remapJar.archiveFile
+                into allBuildsDir
+            }
+            println ">>> Copied ${remapJar.archiveFileName.get()} to ${allBuildsDir.absolutePath}/Fabric!"
         }
-        println ">>> Copied ${remapJar.archiveFileName.get()} to ${allBuildsDir.absolutePath}/Fabric!"
     }
-}
 
-tasks.register('copyToAllBuildsNeoForge', Copy) {
-    dependsOn jarNeoForge
-    from jarNeoForge.archiveFile
-    into file("${allBuildsDir}/NeoForge")
-    doLast {
-        copy {
-            from jarNeoForge.archiveFile
-            into allBuildsDir
-        }
-        println ">>> Copied ${jarNeoForge.archiveFileName.get()} to ${allBuildsDir.absolutePath}/NeoForge!"
-    }
-}
-
-task copyToAllBuilds {
-    dependsOn copyToAllBuildsFabric, copyToAllBuildsNeoForge
-}
-
-build.finalizedBy(copyToAllBuilds)
-
-def launcherNeoForgeDir = file("C:/Users/Mr712/AppData/Roaming/ATLauncher/instances/Minecraft${project.minecraft_version.replace('.', '')}withNeoForge/mods")
-if (launcherNeoForgeDir.exists()) {
-    tasks.register('copyToLauncherNeoForge', Copy) {
+    tasks.register('copyToAllBuildsNeoForge', Copy) {
         dependsOn jarNeoForge
         from jarNeoForge.archiveFile
-        into launcherNeoForgeDir
+        into file("${allBuildsDir}/NeoForge")
         doLast {
+            copy {
+                from jarNeoForge.archiveFile
+                into allBuildsDir
+            }
+            println ">>> Copied ${jarNeoForge.archiveFileName.get()} to ${allBuildsDir.absolutePath}/NeoForge!"
+        }
+    }
+
+    task copyToAllBuilds {
+        dependsOn copyToAllBuildsFabric, copyToAllBuildsNeoForge
+    }
+
+    build.finalizedBy(copyToAllBuilds)
+}
+
+def isWindows = System.getProperty("os.name").toLowerCase().contains("win")
+def appData = System.getenv("APPDATA") ?: (isWindows ? "${userHome}/AppData/Roaming" : "${userHome}/.local/share")
+def atLauncherDir = System.getenv("ATLAUNCHER_DIR") ? file(System.getenv("ATLAUNCHER_DIR")) : file("${appData}/ATLauncher")
+def launcherNeoForgeDir = file("${atLauncherDir}/instances/Minecraft${project.minecraft_version.replace('.', '')}withNeoForge/mods")
+
+tasks.register('copyToLauncherNeoForge', Copy) {
+    dependsOn jarNeoForge
+    from jarNeoForge.archiveFile
+    into launcherNeoForgeDir
+    onlyIf { launcherNeoForgeDir.exists() }
+    doLast {
+        if (launcherNeoForgeDir.exists()) {
             println ">>> Copied ${jarNeoForge.archiveFileName.get()} to ATLauncher NeoForge instance mods folder!"
         }
     }
+}
+if (launcherNeoForgeDir.exists()) {
     build.finalizedBy(copyToLauncherNeoForge)
 }
 
@@ -194,7 +204,7 @@ tasks.register('testFabric', Exec) {
 tasks.register('testNeoForge', Exec) {
     group = "verification"
     description = "Runs automated NeoForge client test against vanilla multiplayer server."
-    dependsOn jarNeoForge, 'copyToLauncherNeoForge'
+    dependsOn jarNeoForge, copyToLauncherNeoForge
     workingDir project.projectDir
     def targetServer = project.findProperty('server') ?: "hub.opblocks.com"
     def mcVer = project.minecraft_version

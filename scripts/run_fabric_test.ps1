@@ -3,19 +3,42 @@ param(
     [int]$TimeoutSeconds = 40
 )
 
-$runDir = "$PSScriptRoot/.."
-$logPath = "$runDir/run/logs/latest.log"
+$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
+$runModsDir = "$projectRoot/run/mods"
+$testModsFabric = "$projectRoot/test_mods/fabric"
+$logPath = "$projectRoot/run/logs/latest.log"
 
 if (Test-Path $logPath) {
     Remove-Item $logPath -Force -ErrorAction SilentlyContinue
 }
 
+# Automatically copy any custom test mods provided in test_mods/fabric
+if (Test-Path $testModsFabric) {
+    $customMods = Get-ChildItem $testModsFabric -Filter "*.jar" -ErrorAction SilentlyContinue
+    if ($customMods.Count -gt 0) {
+        if (-not (Test-Path $runModsDir)) {
+            New-Item -ItemType Directory -Force -Path $runModsDir | Out-Null
+        }
+        foreach ($m in $customMods) {
+            Copy-Item $m.FullName -Destination $runModsDir -Force
+        }
+        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from test_mods/fabric into run/mods"
+    }
+}
+
 Write-Output "==> Starting Fabric Client via Gradle targeting '$Server'..."
 
+$isWin = ($IsWindows -or $env:OS -match "Windows")
+
 $psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = "cmd.exe"
-$psi.Arguments = "/c gradlew.bat runClient --args=""--quickPlayMultiplayer $Server"""
-$psi.WorkingDirectory = (Resolve-Path $runDir).Path
+if ($isWin) {
+    $psi.FileName = "cmd.exe"
+    $psi.Arguments = "/c gradlew.bat runClient --args=""--quickPlayMultiplayer $Server"""
+} else {
+    $psi.FileName = "./gradlew"
+    $psi.Arguments = "runClient --args=""--quickPlayMultiplayer $Server"""
+}
+$psi.WorkingDirectory = $projectRoot
 $psi.UseShellExecute = $false
 $psi.RedirectStandardOutput = $false
 $psi.RedirectStandardError = $false

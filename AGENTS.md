@@ -106,4 +106,8 @@ Each branch includes automated client tests verifying handshake, palette snapsho
   ```
 - **Full 10-round progressive test suites:**
   - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
-  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
+  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
+- **Custom Mod Testing:**
+  - Place third-party mod `.jar` files in `test_mods/fabric/` or `test_mods/neoforge/`.
+  - Jars are automatically copied to test instances and tested against vanilla servers.
+  - All `.jar` files in `test_mods/` are git-ignored.
