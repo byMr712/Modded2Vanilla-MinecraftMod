@@ -53,6 +53,27 @@ To compile the mod, run the following command in your terminal:
 ```
 The compiled files for both loaders (Fabric and NeoForge) will be saved in the `build/libs` directory and automatically synced to `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
 
+
+## Automated Compatibility Testing
+
+To verify mod isolation and multiplayer server connectivity without manual launcher steps:
+- **Fabric:**
+  `ash
+  ./gradlew testFabric
+  `
+- **NeoForge:**
+  `ash
+  ./gradlew testNeoForge
+  `
+- Target a custom server address:
+  `ash
+  ./gradlew testFabric -Pserver=hub.opblocks.com
+  ./gradlew testNeoForge -Pserver=hub.opblocks.com
+  `
+- Run full 10-round progressive test suites:
+  - Fabric: pwsh -File scripts/test_all_fabric_rounds.ps1
+  - NeoForge: pwsh -File scripts/test_all_neoforge_rounds.ps1
+
 ## Authors and License
 
 - Author: [Mr712](https://github.com/byMr712)
