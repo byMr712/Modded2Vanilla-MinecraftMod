@@ -62,17 +62,31 @@ if (-not (Test-Path $instanceDir)) {
 $instanceModsDir = Join-Path $instanceDir "mods"
 $testModsNeo = Join-Path $projectRoot "test_mods/neoforge"
 
-# Automatically copy any custom test mods provided in test_mods/neoforge
-if (Test-Path $testModsNeo) {
-    $customMods = Get-ChildItem $testModsNeo -Filter "*.jar" -ErrorAction SilentlyContinue
+# Clean stale third-party mods, keeping MrModded2Vanilla
+if (Test-Path $instanceModsDir) {
+    Get-ChildItem "$instanceModsDir/*.jar" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notmatch "MrModded2Vanilla" } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+} else {
+    New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
+}
+
+# Automatically copy custom test mods provided in test_mods/<version>/neoforge or test_mods/neoforge
+$modsSourceNeo = if (Test-Path "$projectRoot/test_mods/$McVersion/neoforge") {
+    "$projectRoot/test_mods/$McVersion/neoforge"
+} elseif (Test-Path $testModsNeo) {
+    $testModsNeo
+} else {
+    $null
+}
+
+if ($modsSourceNeo) {
+    $customMods = Get-ChildItem $modsSourceNeo -Filter "*.jar" -ErrorAction SilentlyContinue
     if ($customMods.Count -gt 0) {
-        if (-not (Test-Path $instanceModsDir)) {
-            New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
-        }
         foreach ($m in $customMods) {
             Copy-Item $m.FullName -Destination $instanceModsDir -Force
         }
-        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from test_mods/neoforge into NeoForge instance mods folder"
+        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSourceNeo into NeoForge instance mods folder"
     }
 }
 
@@ -120,6 +134,10 @@ if (Test-Path $jsonPath) {
     $cpList = @()
     foreach ($lib in $libMap.Values) {
         if ($lib.downloads.artifact.path) {
+            # Skip modular bootstrap jars that are passed via -p / module-path
+            if ($lib.downloads.artifact.path -match "org/ow2/asm|securejarhandler|bootstraplauncher|JarJarFileSystems") {
+                continue
+            }
             $p = Join-Path "$usersDir\libraries" $lib.downloads.artifact.path
             if (Test-Path $p) {
                 $cpList += $p
