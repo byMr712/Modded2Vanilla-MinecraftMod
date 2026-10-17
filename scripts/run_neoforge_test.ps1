@@ -4,10 +4,10 @@ param(
     [int]$TimeoutSeconds = 40
 )
 
-$usersDir = "C:\Users\Mr712\AppData\Roaming\ATLauncher"
+$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
 
 if (-not $McVersion) {
-    $propsPath = "$PSScriptRoot/../gradle.properties"
+    $propsPath = "$projectRoot/gradle.properties"
     if (Test-Path $propsPath) {
         $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
         if ($line) {
@@ -19,9 +19,64 @@ if (-not $McVersion) {
     }
 }
 
+# Determine ATLauncher / instance directory dynamically across any machine
+$isWin = ($IsWindows -or $env:OS -match "Windows")
+$userHome = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::UserProfile)
+
+$usersDir = if ($env:ATLAUNCHER_DIR) {
+    $env:ATLAUNCHER_DIR
+} elseif ($env:APPDATA -and (Test-Path "$env:APPDATA\ATLauncher")) {
+    "$env:APPDATA\ATLauncher"
+} elseif (Test-Path "$userHome/Library/Application Support/ATLauncher") {
+    "$userHome/Library/Application Support/ATLauncher"
+} elseif (Test-Path "$userHome/.local/share/atlauncher") {
+    "$userHome/.local/share/atlauncher"
+} elseif ($env:APPDATA) {
+    "$env:APPDATA\ATLauncher"
+} else {
+    "$userHome/.local/share/atlauncher"
+}
+
 $instanceName = "Minecraft$($McVersion.Replace('.', ''))withNeoForge"
-$instanceDir = "$usersDir\instances\$instanceName"
-$logPath = "$instanceDir\logs\latest.log"
+$instanceDir = Join-Path $usersDir "instances/$instanceName"
+
+# If exact named instance doesn't exist, search for any instance matching NeoForge and version
+if (-not (Test-Path $instanceDir)) {
+    $instancesRoot = Join-Path $usersDir "instances"
+    if (Test-Path $instancesRoot) {
+        $found = Get-ChildItem $instancesRoot -Directory -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match "NeoForge" -and $_.Name -match [regex]::Escape($McVersion.Replace('.', '')) } |
+            Select-Object -First 1
+        if ($found) {
+            $instanceDir = $found.FullName
+            $instanceName = $found.Name
+        }
+    }
+}
+
+if (-not (Test-Path $instanceDir)) {
+    Write-Error "NeoForge instance for Minecraft $McVersion was not found at '$instanceDir'. Please ensure an instance named '$instanceName' exists in ATLauncher, or set the ATLAUNCHER_DIR environment variable."
+    exit 1
+}
+
+$instanceModsDir = Join-Path $instanceDir "mods"
+$testModsNeo = Join-Path $projectRoot "test_mods/neoforge"
+
+# Automatically copy any custom test mods provided in test_mods/neoforge
+if (Test-Path $testModsNeo) {
+    $customMods = Get-ChildItem $testModsNeo -Filter "*.jar" -ErrorAction SilentlyContinue
+    if ($customMods.Count -gt 0) {
+        if (-not (Test-Path $instanceModsDir)) {
+            New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
+        }
+        foreach ($m in $customMods) {
+            Copy-Item $m.FullName -Destination $instanceModsDir -Force
+        }
+        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from test_mods/neoforge into NeoForge instance mods folder"
+    }
+}
+
+$logPath = Join-Path $instanceDir "logs/latest.log"
 
 if (Test-Path $logPath) {
     Remove-Item $logPath -Force -ErrorAction SilentlyContinue
@@ -50,10 +105,23 @@ foreach ($p in $parts) {
 }
 
 $javaExe = $resolvedArgs[0]
-if (-not $javaExe.EndsWith(".exe")) {
+if (-not $javaExe.EndsWith(".exe") -and $isWin) {
     $javaExe = "$javaExe.exe"
 }
 $javaExe = $javaExe.Replace("javaw.exe", "java.exe")
+
+# Fallback to system or JAVA_HOME java if bundled ATLauncher java is not present on this machine
+if (-not (Test-Path $javaExe)) {
+    if ($env:JAVA_HOME) {
+        $candidate = if ($isWin) { Join-Path $env:JAVA_HOME "bin/java.exe" } else { Join-Path $env:JAVA_HOME "bin/java" }
+        if (Test-Path $candidate) {
+            $javaExe = $candidate
+        }
+    }
+    if (-not (Test-Path $javaExe)) {
+        $javaExe = "java"
+    }
+}
 
 $remainingArgs = $resolvedArgs[1..($resolvedArgs.Count - 1)]
 
@@ -72,7 +140,6 @@ foreach ($a in $remainingArgs) {
 }
 $psi.WorkingDirectory = $instanceDir
 $psi.UseShellExecute = $false
-# Do NOT redirect stdout/stderr without async reader to prevent OS pipe deadlocks
 $psi.RedirectStandardOutput = $false
 $psi.RedirectStandardError = $false
 
