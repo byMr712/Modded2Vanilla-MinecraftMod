@@ -1,4 +1,4 @@
-﻿> **Язык:** Русский · [English](README.en.md)
+> **Язык:** Русский · [English](README.en.md)
 
 # MrModded2Vanilla
 
@@ -52,6 +52,7 @@ MrModded2Vanilla автоматически берет на себя защит�
 ./gradlew build
 ```
 Собранные файлы для обоих загрузчиков (Fabric и NeoForge) будут находиться в папке `build/libs` и автоматически копироваться в `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
+
 
 ## Авторы и лицензия
 
