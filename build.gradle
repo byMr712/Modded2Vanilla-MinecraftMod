@@ -307,4 +307,21 @@ if (launcherNeoForgeDir.exists()) {
         }
     }
     build.finalizedBy(copyToLauncherNeoForge)
-}
+}
+tasks.register('testFabric', Exec) {
+    group = "verification"
+    description = "Runs automated Fabric client test against vanilla multiplayer server."
+    workingDir project.projectDir
+    def targetServer = project.findProperty('server') ?: "hub.opblocks.com"
+    commandLine "pwsh", "-ExecutionPolicy", "Bypass", "-File", "scripts/run_fabric_test.ps1", "-Server", targetServer
+}
+
+tasks.register('testNeoForge', Exec) {
+    group = "verification"
+    description = "Runs automated NeoForge client test against vanilla multiplayer server."
+    dependsOn jarNeoForge, 'copyToLauncherNeoForge'
+    workingDir project.projectDir
+    def targetServer = project.findProperty('server') ?: "hub.opblocks.com"
+    def mcVer = project.minecraft_version
+    commandLine "pwsh", "-ExecutionPolicy", "Bypass", "-File", "scripts/run_neoforge_test.ps1", "-Server", targetServer, "-McVersion", mcVer
+}
