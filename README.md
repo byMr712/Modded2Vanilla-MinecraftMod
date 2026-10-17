@@ -70,7 +70,7 @@ Modded2Vanilla автоматически берет на себя защиту 
   ./gradlew testNeoForge -Pserver=example-server.com
   ```
 - **Примечание для NeoForge:**
-  Для запуска `./gradlew testNeoForge` на стороннем ПК требуется установленный ATLauncher с инстансом под целевую версию Minecraft (по умолчанию `Minecraft<версия>withNeoForge`), либо переопределение пути к директории ATLauncher через переменную окружения `ATLAUNCHER_DIR`.
+  Для запуска `./gradlew testNeoForge` на стороннем ПК требуется установленный ATLauncher с инстансом под целевую версию Minecraft (по умолчанию `Minecraft12110withNeoForge`), либо переопределение пути к директории ATLauncher через переменную окружения `ATLAUNCHER_DIR`.
 - **Тестирование собственных модов:**
   Поместите любые сторонние `.jar` файлы модов в соответствующие папки:
   - Для Fabric: в папку `test_mods/fabric/`
