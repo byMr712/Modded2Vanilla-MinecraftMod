@@ -12,17 +12,38 @@ if (Test-Path $logPath) {
     Remove-Item $logPath -Force -ErrorAction SilentlyContinue
 }
 
-# Automatically copy any custom test mods provided in test_mods/fabric
-if (Test-Path $testModsFabric) {
-    $customMods = Get-ChildItem $testModsFabric -Filter "*.jar" -ErrorAction SilentlyContinue
+$propsPath = "$projectRoot/gradle.properties"
+$McVersion = "1.21"
+if (Test-Path $propsPath) {
+    $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+    if ($line) {
+        $McVersion = $line.Line.Split("=")[1].Trim()
+    }
+}
+
+# Clean stale mods before loading test mods
+if (Test-Path $runModsDir) {
+    Remove-Item "$runModsDir/*.jar" -Force -ErrorAction SilentlyContinue
+} else {
+    New-Item -ItemType Directory -Force -Path $runModsDir | Out-Null
+}
+
+# Automatically copy custom test mods provided in test_mods/<version>/fabric or test_mods/fabric
+$modsSource = if (Test-Path "$projectRoot/test_mods/$McVersion/fabric") {
+    "$projectRoot/test_mods/$McVersion/fabric"
+} elseif (Test-Path $testModsFabric) {
+    $testModsFabric
+} else {
+    $null
+}
+
+if ($modsSource) {
+    $customMods = Get-ChildItem $modsSource -Filter "*.jar" -ErrorAction SilentlyContinue
     if ($customMods.Count -gt 0) {
-        if (-not (Test-Path $runModsDir)) {
-            New-Item -ItemType Directory -Force -Path $runModsDir | Out-Null
-        }
         foreach ($m in $customMods) {
             Copy-Item $m.FullName -Destination $runModsDir -Force
         }
-        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from test_mods/fabric into run/mods"
+        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSource into run/mods"
     }
 }
 
