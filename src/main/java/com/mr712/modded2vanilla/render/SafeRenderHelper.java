@@ -8,6 +8,8 @@ import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.state.LivingEntityRenderState;
 import net.minecraft.client.util.math.MatrixStack;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,19 +28,20 @@ public final class SafeRenderHelper {
         int light,
         S state,
         float limbAngle,
-        float limbDistance
+        float limbDistance,
+        Operation<Void> original
     ) {
         if (featureRenderer == null) {
             return;
         }
 
         if (!IsolatorState.isIsolating()) {
-            featureRenderer.render(matrices, vertexConsumers, light, state, limbAngle, limbDistance);
+            original.call(featureRenderer, matrices, vertexConsumers, light, state, limbAngle, limbDistance);
             return;
         }
 
         try {
-            featureRenderer.render(matrices, vertexConsumers, light, state, limbAngle, limbDistance);
+            original.call(featureRenderer, matrices, vertexConsumers, light, state, limbAngle, limbDistance);
         } catch (Throwable t) {
             String className = featureRenderer.getClass().getName();
             if (LOGGED_CRASHING_RENDERERS.add(className)) {
