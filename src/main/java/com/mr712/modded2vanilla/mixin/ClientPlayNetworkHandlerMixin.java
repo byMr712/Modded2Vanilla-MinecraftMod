@@ -20,6 +20,7 @@ public abstract class ClientPlayNetworkHandlerMixin {
 
     @Inject(method = "handleLogin", at = @At("TAIL"))
     private void mrModded2Vanilla$onGameJoin(ClientboundLoginPacket packet, CallbackInfo ci) {
+        com.mr712.modded2vanilla.snapshot.VanillaBlockStateSnapshot.capture();
         if (IsolatorState.isMultiplayer()) {
             AdjustmentTracker.printNoticeIfAny();
         }

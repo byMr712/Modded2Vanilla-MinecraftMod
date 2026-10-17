@@ -17,12 +17,15 @@ public final class VanillaBlockStateSnapshot {
     }
 
     public static synchronized void capture() {
-        if (captured) {
+        int size = Block.BLOCK_STATE_REGISTRY.size();
+        if (size == 0) {
+            return;
+        }
+        if (captured && VANILLA_STATES != null && VANILLA_STATES.length > 0) {
             return;
         }
         captured = true;
 
-        int size = Block.BLOCK_STATE_REGISTRY.size();
         VANILLA_STATES = new BlockState[size];
         STATE_TO_RAW_ID = new Reference2IntOpenHashMap<>(size);
         STATE_TO_RAW_ID.defaultReturnValue(-1);
@@ -38,7 +41,10 @@ public final class VanillaBlockStateSnapshot {
     }
 
     public static BlockState resolveState(int rawId) {
-        if (!IsolatorState.isIsolating() || VANILLA_STATES == null) {
+        if (!captured || VANILLA_STATES == null || VANILLA_STATES.length == 0) {
+            capture();
+        }
+        if (!IsolatorState.isIsolating() || VANILLA_STATES == null || VANILLA_STATES.length == 0) {
             BlockState normal = Block.BLOCK_STATE_REGISTRY.byId(rawId);
             return normal != null ? normal : Blocks.AIR.defaultBlockState();
         }
@@ -55,6 +61,9 @@ public final class VanillaBlockStateSnapshot {
     }
 
     public static int getRawId(BlockState state) {
+        if (!captured || STATE_TO_RAW_ID == null || VANILLA_STATES == null || VANILLA_STATES.length == 0) {
+            capture();
+        }
         if (!IsolatorState.isIsolating() || STATE_TO_RAW_ID == null || state == null) {
             return Block.BLOCK_STATE_REGISTRY.getId(state);
         }
@@ -68,6 +77,6 @@ public final class VanillaBlockStateSnapshot {
     }
 
     public static boolean isCaptured() {
-        return captured;
+        return captured && VANILLA_STATES != null && VANILLA_STATES.length > 0;
     }
 }
