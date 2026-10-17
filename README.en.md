@@ -70,7 +70,7 @@ To verify mod isolation and multiplayer server connectivity without manual launc
   ./gradlew testNeoForge -Pserver=example-server.com
   ```
 - **Note for NeoForge:**
-  Running `./gradlew testNeoForge` on a third-party machine requires an installed ATLauncher with an instance for the target Minecraft version (named `Minecraft<version>withNeoForge` by default), or overriding the ATLauncher path via the `ATLAUNCHER_DIR` environment variable.
+  Running `./gradlew testNeoForge` on a third-party machine requires an installed ATLauncher with an instance for the target Minecraft version (named `Minecraft1216withNeoForge` by default), or overriding the ATLauncher path via the `ATLAUNCHER_DIR` environment variable.
 - **Testing Custom Mods:**
   Place any third-party mod `.jar` files into the designated folders:
   - For Fabric: in `test_mods/fabric/`
