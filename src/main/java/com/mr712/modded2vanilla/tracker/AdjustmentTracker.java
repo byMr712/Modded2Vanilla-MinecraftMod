@@ -31,6 +31,7 @@ public final class AdjustmentTracker {
                className.startsWith("net.fabricmc.") ||
                className.startsWith("net.neoforged.") ||
                className.startsWith("net.minecraftforge.") ||
+               className.startsWith("cpw.mods.") ||
                className.startsWith("java.") ||
                className.startsWith("javax.") ||
                className.startsWith("jdk.") ||
@@ -61,8 +62,10 @@ public final class AdjustmentTracker {
                "fabric-api".equalsIgnoreCase(modId) ||
                "neoforge".equalsIgnoreCase(modId) ||
                "forge".equalsIgnoreCase(modId) ||
+               "modlauncher".equalsIgnoreCase(modId) ||
                "java".equalsIgnoreCase(modId) ||
                "brigadier".equalsIgnoreCase(modId) ||
+               modId.startsWith("cpw_mods_") ||
                modId.startsWith("fabric-") ||
                modId.startsWith("fabric_") ||
                modId.startsWith("neoforge_") ||
