@@ -1,10 +1,27 @@
 param(
     [string]$Server = "hub.opblocks.com",
+    [string]$McVersion = "",
     [int]$TimeoutSeconds = 40
 )
 
 $usersDir = "C:\Users\Mr712\AppData\Roaming\ATLauncher"
-$logPath = "$usersDir\instances\Minecraft121withNeoForge\logs\latest.log"
+
+if (-not $McVersion) {
+    $propsPath = "$PSScriptRoot/../gradle.properties"
+    if (Test-Path $propsPath) {
+        $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+        if ($line) {
+            $McVersion = $line.ToString().Split('=')[1].Trim()
+        }
+    }
+    if (-not $McVersion) {
+        $McVersion = "1.21"
+    }
+}
+
+$instanceName = "Minecraft$($McVersion.Replace('.', ''))withNeoForge"
+$instanceDir = "$usersDir\instances\$instanceName"
+$logPath = "$instanceDir\logs\latest.log"
 
 if (Test-Path $logPath) {
     Remove-Item $logPath -Force -ErrorAction SilentlyContinue
@@ -24,7 +41,11 @@ $parts = $argString -split ', '
 $resolvedArgs = @()
 foreach ($p in $parts) {
     $p = $p.Trim()
+    $p = $p.Replace("USERSDIR\instances\Minecraft121withNeoForge", "USERSDIR\instances\$instanceName")
     $p = $p.Replace("USERSDIR", $usersDir)
+    if ($p -eq "1.21") {
+        $p = $McVersion
+    }
     $resolvedArgs += $p
 }
 
@@ -42,14 +63,14 @@ if ($Server) {
     $remainingArgs += $Server
 }
 
-Write-Output "==> Starting NeoForge targeting '$Server'..."
+Write-Output "==> Starting NeoForge ($instanceName) targeting '$Server'..."
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo
 $psi.FileName = $javaExe
 foreach ($a in $remainingArgs) {
     $psi.ArgumentList.Add($a)
 }
-$psi.WorkingDirectory = "$usersDir\instances\Minecraft121withNeoForge"
+$psi.WorkingDirectory = $instanceDir
 $psi.UseShellExecute = $false
 # Do NOT redirect stdout/stderr without async reader to prevent OS pipe deadlocks
 $psi.RedirectStandardOutput = $false

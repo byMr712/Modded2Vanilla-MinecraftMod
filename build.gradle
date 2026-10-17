@@ -197,6 +197,7 @@ tasks.register('testNeoForge', Exec) {
     dependsOn jarNeoForge, 'copyToLauncherNeoForge'
     workingDir project.projectDir
     def targetServer = project.findProperty('server') ?: "hub.opblocks.com"
-    commandLine "pwsh", "-ExecutionPolicy", "Bypass", "-File", "scripts/run_neoforge_test.ps1", "-Server", targetServer
+    def mcVer = project.minecraft_version
+    commandLine "pwsh", "-ExecutionPolicy", "Bypass", "-File", "scripts/run_neoforge_test.ps1", "-Server", targetServer, "-McVersion", mcVer
 }
 
