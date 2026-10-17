@@ -51,28 +51,33 @@ To compile the mod, run the following command in your terminal:
 ```bash
 ./gradlew build
 ```
-The compiled files for both loaders (Fabric and NeoForge) will be saved in the `build/libs` directory and automatically synced to `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
-
+The compiled files for both loaders (Fabric and NeoForge) will be saved in the `build/libs` directory (and automatically synced to `Documents/MrModded2Vanilla_all_builds` if present).
 
 ## Automated Compatibility Testing
 
 To verify mod isolation and multiplayer server connectivity without manual launcher steps:
 - **Fabric:**
-  `ash
+  ```bash
   ./gradlew testFabric
-  `
+  ```
 - **NeoForge:**
-  `ash
+  ```bash
   ./gradlew testNeoForge
-  `
+  ```
 - Target a custom server address:
-  `ash
+  ```bash
   ./gradlew testFabric -Pserver=hub.opblocks.com
   ./gradlew testNeoForge -Pserver=hub.opblocks.com
-  `
+  ```
+- **Testing Custom Mods:**
+  Place any third-party mod `.jar` files into the designated folders:
+  - For Fabric: in `test_mods/fabric/`
+  - For NeoForge: in `test_mods/neoforge/`
+  When running `./gradlew testFabric` or `./gradlew testNeoForge`, all `.jar` files in these folders will automatically be loaded and tested against the multiplayer server. All `.jar` files inside `test_mods/` are ignored by Git.
 - Run full 10-round progressive test suites:
-  - Fabric: pwsh -File scripts/test_all_fabric_rounds.ps1
-  - NeoForge: pwsh -File scripts/test_all_neoforge_rounds.ps1
+  - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
+  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
+
 
 ## Authors and License
 
