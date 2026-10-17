@@ -42,6 +42,21 @@ function Adapt-DevJar($jarPath) {
                 $sw.Close()
             }
         }
+        $fmod = $zip.GetEntry("fabric.mod.json")
+        if ($fmod) {
+            $sr = New-Object System.IO.StreamReader($fmod.Open())
+            $text = $sr.ReadToEnd()
+            $sr.Close()
+            if ($text -match '"fabric-api":\s*"[^"]*"') {
+                $newText = [regex]::Replace($text, '"fabric-api":\s*"[^"]*"', '"fabric-api": "*"')
+                $fmod.Delete()
+                $newEntry = $zip.CreateEntry("fabric.mod.json")
+                $sw = New-Object System.IO.StreamWriter($newEntry.Open())
+                $sw.Write($newText)
+                $sw.Flush()
+                $sw.Close()
+            }
+        }
     } finally {
         $zip.Dispose()
     }
