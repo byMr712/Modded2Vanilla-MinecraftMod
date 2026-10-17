@@ -131,11 +131,36 @@ if (Test-Path $jsonPath) {
         }
     }
 
+    # Discover modular jars passed via -p / --module-path
+    $modulePathJars = @()
+    $hasP = $false
+    foreach ($item in $json.arguments.jvm) {
+        if ($item -is [string]) {
+            if ($hasP) {
+                $hasP = $false
+                $parts = ($item -split '[\$\{classpath_separator\};:]') | Where-Object { $_ -match "\.jar$" }
+                $modulePathJars += $parts
+            } elseif ($item -eq "-p" -or $item -eq "--module-path") {
+                $hasP = $true
+            }
+        }
+    }
+
     $cpList = @()
     foreach ($lib in $libMap.Values) {
         if ($lib.downloads.artifact.path) {
-            # Skip modular bootstrap jars that are passed via -p / module-path
-            if ($lib.downloads.artifact.path -match "org/ow2/asm|securejarhandler|bootstraplauncher|JarJarFileSystems") {
+            $artifactLeaf = Split-Path $lib.downloads.artifact.path -Leaf
+            $isModuleJar = $false
+            foreach ($mj in $modulePathJars) {
+                $mjLeaf = Split-Path $mj -Leaf
+                $mjBase = $mjLeaf -replace '-\d.*\.jar$', ''
+                $artBase = $artifactLeaf -replace '-\d.*\.jar$', ''
+                if ($mjBase -and $artBase -and ($mjBase -eq $artBase)) {
+                    $isModuleJar = $true
+                    break
+                }
+            }
+            if ($isModuleJar) {
                 continue
             }
             $p = Join-Path "$usersDir\libraries" $lib.downloads.artifact.path
@@ -191,7 +216,8 @@ if (Test-Path $jsonPath) {
     }
 
     $resolvedArgs = $jvmArgs + $gameArgs
-    $bundledJava = Join-Path $usersDir "runtimes/minecraft/java-runtime-delta/windows-x64/java-runtime-delta/bin/java.exe"
+    $comp = if ($json.javaVersion.component) { $json.javaVersion.component } else { "java-runtime-delta" }
+    $bundledJava = Join-Path $usersDir "runtimes/minecraft/$comp/windows-x64/$comp/bin/java.exe"
     if (Test-Path $bundledJava) {
         $javaExe = $bundledJava
     } elseif ($env:JAVA_HOME) {
