@@ -2,20 +2,52 @@ param(
     [string]$Server = "example-server.com"
 )
 
-$fabricMods = @(
-    @{ Round=1; File="appleskin-fabric-mc1.21-3.0.6.jar"; Desc="AppleSkin (HUD/Food sync)" },
-    @{ Round=2; File="Xaeros_Minimap_25.3.2_Fabric_1.21.jar"; Desc="Xaero's Minimap (Custom payload channels)" },
-    @{ Round=3; File="entity_texture_features-7.2.6-1.21-fabric.jar"; Desc="Entity Texture Features (LivingEntityRenderer layers)" },
-    @{ Round=4; File="CustomPlayerModels-Fabric-1.21-0.6.27a.jar"; Desc="Custom Player Models (Bone animations, player skin layers)" },
-    @{ Round=5; File="Pehkui-3.8.3+1.14.4-1.21.jar"; Desc="Pehkui (Scale/hitbox/reach/step height modification)" },
-    @{ Round=6; File="MouseTweaks-fabric-mc1.21-2.26.jar"; Desc="Mouse Tweaks (Inventory slots, container packet manipulation)" },
-    @{ Round=7; File="sound-physics-remastered-fabric-1.21.1-1.5.1.jar"; Desc="Sound Physics Remastered (Acoustic raytracing, sound events)" },
-    @{ Round=8; File="shulkerboxtooltip-fabric-5.1.2+1.21.jar"; Desc="Shulker Box Tooltip (Data component parsing, creative NBT)" },
-    @{ Round=9; File="badpackets-fabric-0.8.2.jar"; Desc="BadPackets (Channel manager, network packet interceptor)" },
-    @{ Round=10; File="cloth-config-15.0.140-fabric.jar"; Desc="Cloth Config (Dynamic configs, client screen hooks)" }
-)
+$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
+$propsPath = "$projectRoot/gradle.properties"
+$McVersion = "1.21"
+if (Test-Path $propsPath) {
+    $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+    if ($line) {
+        $McVersion = $line.Line.Split("=")[1].Trim()
+    }
+}
 
-$runMods = "run/mods"
+$modsSource = if (Test-Path "$projectRoot/test_mods/$McVersion/fabric") {
+    "$projectRoot/test_mods/$McVersion/fabric"
+} elseif (Test-Path "$projectRoot/test_mods/fabric") {
+    "$projectRoot/test_mods/fabric"
+} else {
+    $null
+}
+
+$curated = @{
+    "appleskin-fabric-mc1.21-3.0.6.jar" = "AppleSkin (HUD/Food sync)"
+    "Xaeros_Minimap_25.3.2_Fabric_1.21.jar" = "Xaero's Minimap (Custom payload channels)"
+    "entity_texture_features-7.2.6-1.21-fabric.jar" = "Entity Texture Features (LivingEntityRenderer layers)"
+    "CustomPlayerModels-Fabric-1.21-0.6.27a.jar" = "Custom Player Models (Bone animations, player skin layers)"
+    "Pehkui-3.8.3+1.14.4-1.21.jar" = "Pehkui (Scale/hitbox/reach/step height modification)"
+    "MouseTweaks-fabric-mc1.21-2.26.jar" = "Mouse Tweaks (Inventory slots, container packet manipulation)"
+    "sound-physics-remastered-fabric-1.21.1-1.5.1.jar" = "Sound Physics Remastered (Acoustic raytracing, sound events)"
+    "shulkerboxtooltip-fabric-5.1.2+1.21.jar" = "Shulker Box Tooltip (Data component parsing, creative NBT)"
+    "badpackets-fabric-0.8.2.jar" = "BadPackets (Channel manager, network packet interceptor)"
+    "cloth-config-15.0.140-fabric.jar" = "Cloth Config (Dynamic configs, client screen hooks)"
+}
+
+$availableJars = if ($modsSource) { @(Get-ChildItem $modsSource -Filter "*.jar" -ErrorAction SilentlyContinue) } else { @() }
+$rounds = @()
+
+if ($availableJars.Count -gt 0) {
+    $count = [Math]::Min($availableJars.Count, 10)
+    for ($i = 0; $i -lt $count; $i++) {
+        $jar = $availableJars[$i]
+        $desc = if ($curated.ContainsKey($jar.Name)) { $curated[$jar.Name] } else { $jar.BaseName }
+        $rounds += @{ Round = ($i + 1); JarPath = $jar.FullName; Desc = $desc }
+    }
+} else {
+    $rounds += @{ Round = 1; JarPath = ""; Desc = "MrModded2Vanilla Baseline Isolation" }
+}
+
+$runMods = "$projectRoot/run/mods"
 if (-not (Test-Path $runMods)) {
     New-Item -ItemType Directory -Force -Path $runMods | Out-Null
 } else {
@@ -24,19 +56,22 @@ if (-not (Test-Path $runMods)) {
 
 $results = @()
 
-for ($r = 1; $r -le 10; $r++) {
-    $currentMod = $fabricMods[$r - 1]
+foreach ($roundItem in $rounds) {
+    $r = $roundItem.Round
+    $desc = $roundItem.Desc
     Write-Output "`n========================================================"
-    Write-Output ">>> STARTING FABRIC ROUND $r : $($currentMod.Desc)"
+    Write-Output ">>> STARTING FABRIC ROUND $r : $desc"
     Write-Output "========================================================"
 
-    # Add mod for current round
-    Copy-Item "test_mods/fabric/$($currentMod.File)" -Destination $runMods -Force
-    $loadedMods = (Get-ChildItem $runMods).Name -join ", "
-    Write-Output "Currently active mods in run/mods ($r total): $loadedMods"
+    if ($roundItem.JarPath -and (Test-Path $roundItem.JarPath)) {
+        Copy-Item $roundItem.JarPath -Destination $runMods -Force
+    }
+    $loadedMods = (Get-ChildItem $runMods -Filter "*.jar" -ErrorAction SilentlyContinue).Name -join ", "
+    if (-not $loadedMods) { $loadedMods = "None (pure isolation)" }
+    Write-Output "Currently active mods in run/mods: $loadedMods"
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "scripts/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45
+    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
@@ -45,7 +80,7 @@ for ($r = 1; $r -le 10; $r++) {
 
     $results += [PSCustomObject]@{
         Round = $r
-        Mod = $currentMod.Desc
+        Mod = $desc
         Status = $status
         Duration = "$([int]$sw.Elapsed.TotalSeconds)s"
     }
