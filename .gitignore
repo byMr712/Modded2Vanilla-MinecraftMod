@@ -9,3 +9,4 @@ out/
 .vscode/
 *.DS_Store
 run/
+test_mods/
