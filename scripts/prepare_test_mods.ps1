@@ -27,8 +27,15 @@ $neoforgeList = @(
 New-Item -ItemType Directory -Force -Path "test_mods/fabric" | Out-Null
 New-Item -ItemType Directory -Force -Path "test_mods/neoforge" | Out-Null
 
+$propsPath = "$PSScriptRoot/../gradle.properties"
+$mcVer = "1.21"
+if (Test-Path $propsPath) {
+    $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+    if ($line) { $mcVer = $line.Line.Split("=")[1].Trim() }
+}
+
 function Download-Mod($slug, $loader, $targetDir) {
-    $url = "https://api.modrinth.com/v2/project/$slug/version?game_versions=[%221.21%22]&loaders=[%22$loader%22]"
+    $url = "https://api.modrinth.com/v2/project/$slug/version?game_versions=[%22$mcVer%22]&loaders=[%22$loader%22]"
     $res = Invoke-RestMethod -Uri $url -Headers @{ "User-Agent" = "Mr712/Tester" }
     if ($res.Count -gt 0) {
         $file = $res[0].files[0]
