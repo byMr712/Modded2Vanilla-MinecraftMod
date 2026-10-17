@@ -82,53 +82,123 @@ if (Test-Path $logPath) {
     Remove-Item $logPath -Force -ErrorAction SilentlyContinue
 }
 
-$rawCmd = Get-Content "$PSScriptRoot/neoforge_cmd.txt" -Raw
-$marker = ": ["
-$startIdx = $rawCmd.IndexOf($marker)
-$endIdx = $rawCmd.LastIndexOf(']')
-if ($startIdx -lt 0 -or $endIdx -le $startIdx) {
-    Write-Error "Could not parse NeoForge command template!"
-    exit 1
-}
-
-$argString = $rawCmd.Substring($startIdx + $marker.Length, $endIdx - ($startIdx + $marker.Length))
-$parts = $argString -split ', '
+$jsonPath = Join-Path $instanceDir "instance.json"
 $resolvedArgs = @()
-foreach ($p in $parts) {
-    $p = $p.Trim()
-    $p = $p.Replace("USERSDIR\instances\Minecraft121withNeoForge", "USERSDIR\instances\$instanceName")
-    $p = $p.Replace("USERSDIR", $usersDir)
-    if ($p -eq "1.21") {
-        $p = $McVersion
-    }
-    $resolvedArgs += $p
-}
+$javaExe = ""
 
-$javaExe = $resolvedArgs[0]
-if (-not $javaExe.EndsWith(".exe") -and $isWin) {
-    $javaExe = "$javaExe.exe"
-}
-$javaExe = $javaExe.Replace("javaw.exe", "java.exe")
+if (Test-Path $jsonPath) {
+    $json = Get-Content $jsonPath -Raw | ConvertFrom-Json
+    $mcVer = if ($McVersion) { $McVersion } else { $json.id }
+    $sep = if ($isWin) { ";" } else { ":" }
 
-# Fallback to system or JAVA_HOME java if bundled ATLauncher java is not present on this machine
-if (-not (Test-Path $javaExe)) {
-    if ($env:JAVA_HOME) {
-        $candidate = if ($isWin) { Join-Path $env:JAVA_HOME "bin/java.exe" } else { Join-Path $env:JAVA_HOME "bin/java" }
-        if (Test-Path $candidate) {
-            $javaExe = $candidate
+    $cpList = @()
+    foreach ($lib in $json.libraries) {
+        if ($lib.downloads.artifact.path) {
+            $p = Join-Path "$usersDir\libraries" $lib.downloads.artifact.path
+            if (Test-Path $p) {
+                $cpList += $p
+            }
         }
     }
-    if (-not (Test-Path $javaExe)) {
-        $javaExe = "java"
+    $clientJar = Join-Path "$usersDir\libraries" "net/minecraft/client/$mcVer/client-$mcVer.jar"
+    if (Test-Path $clientJar) { $cpList += $clientJar }
+    $cpList = $cpList | Select-Object -Unique
+    $classpath = $cpList -join $sep
+
+    $nativesDir = Join-Path $usersDir "temp/natives"
+    if (-not (Test-Path $nativesDir)) { New-Item -ItemType Directory -Force -Path $nativesDir | Out-Null }
+
+    $jvmArgs = @("-Xmx4096M")
+    foreach ($item in $json.arguments.jvm) {
+        if ($item -is [string]) {
+            $val = $item.Replace('${natives_directory}', $nativesDir)
+            $val = $val.Replace('${launcher_name}', 'ATLauncher')
+            $val = $val.Replace('${launcher_version}', '3.4.41.3')
+            $val = $val.Replace('${classpath}', $classpath)
+            $val = $val.Replace('${version_name}', $mcVer)
+            $val = $val.Replace('${library_directory}', "$usersDir\libraries")
+            $val = $val.Replace('${classpath_separator}', $sep)
+            $jvmArgs += $val
+        }
     }
-}
 
-$remainingArgs = $resolvedArgs[1..($resolvedArgs.Count - 1)]
+    $jvmArgs += $json.mainClass
 
-# QuickPlay parameters
-if ($Server) {
-    $remainingArgs += "--quickPlayMultiplayer"
-    $remainingArgs += $Server
+    $gameArgs = @()
+    foreach ($item in $json.arguments.game) {
+        if ($item -is [string]) {
+            $val = $item.Replace('${auth_player_name}', 'Player')
+            $val = $val.Replace('${version_name}', $mcVer)
+            $val = $val.Replace('${game_directory}', $instanceDir)
+            $val = $val.Replace('${assets_root}', "$usersDir\assets")
+            $val = $val.Replace('${assets_index_name}', $json.assetIndex.id)
+            $val = $val.Replace('${auth_uuid}', '00000000-0000-0000-0000-000000000000')
+            $val = $val.Replace('${auth_access_token}', '0')
+            $val = $val.Replace('${clientid}', '0')
+            $val = $val.Replace('${auth_xuid}', '0')
+            $val = $val.Replace('${user_type}', 'msa')
+            $val = $val.Replace('${version_type}', 'release')
+            $gameArgs += $val
+        }
+    }
+
+    if ($Server) {
+        $gameArgs += @("--quickPlayMultiplayer", $Server)
+    }
+
+    $resolvedArgs = $jvmArgs + $gameArgs
+    if ($env:JAVA_HOME) {
+        $candidate = if ($isWin) { Join-Path $env:JAVA_HOME "bin/java.exe" } else { Join-Path $env:JAVA_HOME "bin/java" }
+        if (Test-Path $candidate) { $javaExe = $candidate }
+    }
+    if (-not $javaExe) { $javaExe = "java" }
+    $remainingArgs = $resolvedArgs
+} else {
+    $rawCmd = Get-Content "$PSScriptRoot/neoforge_cmd.txt" -Raw
+    $marker = ": ["
+    $startIdx = $rawCmd.IndexOf($marker)
+    $endIdx = $rawCmd.LastIndexOf(']')
+    if ($startIdx -lt 0 -or $endIdx -le $startIdx) {
+        Write-Error "Could not parse NeoForge command template!"
+        exit 1
+    }
+
+    $argString = $rawCmd.Substring($startIdx + $marker.Length, $endIdx - ($startIdx + $marker.Length))
+    $parts = $argString -split ', '
+    foreach ($p in $parts) {
+        $p = $p.Trim()
+        $p = $p.Replace("USERSDIR\instances\Minecraft121withNeoForge", "USERSDIR\instances\$instanceName")
+        $p = $p.Replace("USERSDIR", $usersDir)
+        if ($p -eq "1.21") {
+            $p = $McVersion
+        }
+        $resolvedArgs += $p
+    }
+
+    $javaExe = $resolvedArgs[0]
+    if (-not $javaExe.EndsWith(".exe") -and $isWin) {
+        $javaExe = "$javaExe.exe"
+    }
+    $javaExe = $javaExe.Replace("javaw.exe", "java.exe")
+
+    if (-not (Test-Path $javaExe)) {
+        if ($env:JAVA_HOME) {
+            $candidate = if ($isWin) { Join-Path $env:JAVA_HOME "bin/java.exe" } else { Join-Path $env:JAVA_HOME "bin/java" }
+            if (Test-Path $candidate) {
+                $javaExe = $candidate
+            }
+        }
+        if (-not (Test-Path $javaExe)) {
+            $javaExe = "java"
+        }
+    }
+
+    $remainingArgs = $resolvedArgs[1..($resolvedArgs.Count - 1)]
+
+    if ($Server) {
+        $remainingArgs += "--quickPlayMultiplayer"
+        $remainingArgs += $Server
+    }
 }
 
 Write-Output "==> Starting NeoForge ($instanceName) targeting '$Server'..."
