@@ -11,11 +11,42 @@ $neoforgeMods = @(
     @{ Round=10; File="cloth-config-15.0.140-neoforge.jar"; Desc="Cloth Config (Dynamic configs, client screen hooks)" }
 )
 
-$targetModsDir = "C:\Users\Mr712\AppData\Roaming\ATLauncher\instances\Minecraft121withNeoForge\mods"
+$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
+$isWin = ($IsWindows -or $env:OS -match "Windows")
+$userHome = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::UserProfile)
+
+$usersDir = if ($env:ATLAUNCHER_DIR) {
+    $env:ATLAUNCHER_DIR
+} elseif ($env:APPDATA -and (Test-Path "$env:APPDATA\ATLauncher")) {
+    "$env:APPDATA\ATLauncher"
+} elseif (Test-Path "$userHome/Library/Application Support/ATLauncher") {
+    "$userHome/Library/Application Support/ATLauncher"
+} elseif (Test-Path "$userHome/.local/share/atlauncher") {
+    "$userHome/.local/share/atlauncher"
+} elseif ($env:APPDATA) {
+    "$env:APPDATA\ATLauncher"
+} else {
+    "$userHome/.local/share/atlauncher"
+}
+
+$propsPath = "$projectRoot/gradle.properties"
+$McVersion = "1.21"
+if (Test-Path $propsPath) {
+    $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+    if ($line) {
+        $McVersion = $line.Line.Split("=")[1].Trim()
+    }
+}
+$instanceName = "Minecraft$($McVersion.Replace('.', ''))withNeoForge"
+$targetModsDir = Join-Path $usersDir "instances/$instanceName/mods"
 
 # Ensure MrModded2Vanilla NeoForge jar is fresh
 Write-Output "==> Building fresh MrModded2Vanilla NeoForge jar..."
-& cmd.exe /c gradlew.bat jarNeoForge copyToLauncherNeoForge
+if ($isWin) {
+    & cmd.exe /c gradlew.bat jarNeoForge copyToLauncherNeoForge
+} else {
+    & ./gradlew jarNeoForge copyToLauncherNeoForge
+}
 
 # Remove test mods before starting progressive rounds
 $allTestFileNames = $neoforgeMods | ForEach-Object { $_.File }
