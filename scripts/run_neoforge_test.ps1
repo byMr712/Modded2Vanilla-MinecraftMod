@@ -1,7 +1,8 @@
 param(
     [string]$Server = "example-server.com",
     [string]$McVersion = "",
-    [int]$TimeoutSeconds = 40
+    [int]$TimeoutSeconds = 40,
+    [switch]$SkipModCopy
 )
 
 $projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
@@ -62,31 +63,33 @@ if (-not (Test-Path $instanceDir)) {
 $instanceModsDir = Join-Path $instanceDir "mods"
 $testModsNeo = Join-Path $projectRoot "test_mods/neoforge"
 
-# Clean stale third-party mods, keeping MrModded2Vanilla
-if (Test-Path $instanceModsDir) {
-    Get-ChildItem "$instanceModsDir/*.jar" -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -notmatch "MrModded2Vanilla" } |
-        Remove-Item -Force -ErrorAction SilentlyContinue
-} else {
-    New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
-}
+if (-not $SkipModCopy) {
+    # Clean stale third-party mods, keeping MrModded2Vanilla
+    if (Test-Path $instanceModsDir) {
+        Get-ChildItem "$instanceModsDir/*.jar" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notmatch "MrModded2Vanilla" } |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+    } else {
+        New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
+    }
 
-# Automatically copy custom test mods provided in test_mods/<version>/neoforge or test_mods/neoforge
-$modsSourceNeo = if (Test-Path "$projectRoot/test_mods/$McVersion/neoforge") {
-    "$projectRoot/test_mods/$McVersion/neoforge"
-} elseif (Test-Path $testModsNeo) {
-    $testModsNeo
-} else {
-    $null
-}
+    # Automatically copy custom test mods provided in test_mods/<version>/neoforge or test_mods/neoforge
+    $modsSourceNeo = if (Test-Path "$projectRoot/test_mods/$McVersion/neoforge") {
+        "$projectRoot/test_mods/$McVersion/neoforge"
+    } elseif (Test-Path $testModsNeo) {
+        $testModsNeo
+    } else {
+        $null
+    }
 
-if ($modsSourceNeo) {
-    $customMods = Get-ChildItem $modsSourceNeo -Filter "*.jar" -ErrorAction SilentlyContinue
-    if ($customMods.Count -gt 0) {
-        foreach ($m in $customMods) {
-            Copy-Item $m.FullName -Destination $instanceModsDir -Force
+    if ($modsSourceNeo) {
+        $customMods = Get-ChildItem $modsSourceNeo -Filter "*.jar" -ErrorAction SilentlyContinue
+        if ($customMods.Count -gt 0) {
+            foreach ($m in $customMods) {
+                Copy-Item $m.FullName -Destination $instanceModsDir -Force
+            }
+            Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSourceNeo into NeoForge instance mods folder"
         }
-        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSourceNeo into NeoForge instance mods folder"
     }
 }
 
