@@ -1,3 +1,7 @@
+param(
+    [string]$Server = "example-server.com"
+)
+
 $fabricMods = @(
     @{ Round=1; File="appleskin-fabric-mc1.21-3.0.6.jar"; Desc="AppleSkin (HUD/Food sync)" },
     @{ Round=2; File="Xaeros_Minimap_25.3.2_Fabric_1.21.jar"; Desc="Xaero's Minimap (Custom payload channels)" },
@@ -32,7 +36,7 @@ for ($r = 1; $r -le 10; $r++) {
     Write-Output "Currently active mods in run/mods ($r total): $loadedMods"
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "scripts/run_fabric_test.ps1" -Server "hub.opblocks.com" -TimeoutSeconds 45
+    & pwsh -ExecutionPolicy Bypass -File "scripts/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
