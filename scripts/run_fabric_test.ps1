@@ -26,7 +26,7 @@ function Adapt-DevJar($jarPath) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
     $zip = [System.IO.Compression.ZipFile]::Open($jarPath, [System.IO.Compression.ZipArchiveMode]::Update)
     try {
-        $targets = @($zip.Entries | Where-Object { $_.Name -match "\.(accesswidener|classtweaker)$" })
+        $targets = @($zip.Entries | Where-Object { $_.Name -match "\.(accesswidener|classtweaker|ct|aw)$" })
         foreach ($entry in $targets) {
             $sr = New-Object System.IO.StreamReader($entry.Open())
             $text = $sr.ReadToEnd()
