@@ -66,9 +66,11 @@ Modded2Vanilla автоматически берет на себя защиту 
   ```
 - Вы также можете указать любой сервер для проверки:
   ```bash
-  ./gradlew testFabric -Pserver=hub.opblocks.com
-  ./gradlew testNeoForge -Pserver=hub.opblocks.com
+  ./gradlew testFabric -Pserver=example-server.com
+  ./gradlew testNeoForge -Pserver=example-server.com
   ```
+- **Примечание для NeoForge:**
+  Для запуска `./gradlew testNeoForge` на стороннем ПК требуется установленный ATLauncher с инстансом под целевую версию Minecraft (по умолчанию `Minecraft<версия>withNeoForge`), либо переопределение пути к директории ATLauncher через переменную окружения `ATLAUNCHER_DIR`.
 - **Тестирование собственных модов:**
   Поместите любые сторонние `.jar` файлы модов в соответствующие папки:
   - Для Fabric: в папку `test_mods/fabric/`
