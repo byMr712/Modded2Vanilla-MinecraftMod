@@ -92,41 +92,21 @@ Supporting both Fabric and NeoForge loaders from a single codebase without exter
 ## 6. Automated Testing (Multiplayer Verification)
 Each branch includes automated client tests verifying handshake, palette snapshot, DataTracker isolation, and mixin stability against vanilla servers:
 - **Fabric test:**
-  `ash
+  ```bash
   ./gradlew testFabric
   # Target a custom server:
   ./gradlew testFabric -Pserver=hub.opblocks.com
-  `
+  ```
 - **NeoForge test:**
-  `ash
+  ```bash
   ./gradlew testNeoForge
   # Target a custom server:
   ./gradlew testNeoForge -Pserver=hub.opblocks.com
-  `
+  ```
 - **Full 10-round progressive test suites:**
-  - Fabric: pwsh -File scripts/test_all_fabric_rounds.ps1
-  - NeoForge: pwsh -File scripts/test_all_neoforge_rounds.ps1
-"@
-
- = @"
-
-## Автотестирование совместимости
-
-Для быстрой автоматической проверки корректной изоляции модов и подключения к серверу предусмотрены Gradle-задачи:
-- **Fabric:**
-  `ash
-  ./gradlew testFabric
-  `
-- **NeoForge:**
-  `ash
-  ./gradlew testNeoForge
-  `
-- Вы также можете указать любой сервер для проверки:
-  `ash
-  ./gradlew testFabric -Pserver=hub.opblocks.com
-  ./gradlew testNeoForge -Pserver=hub.opblocks.com
-  `
-- Запуск полных 10-раундовых тестов со сложными модами:
-  - Fabric: pwsh -File scripts/test_all_fabric_rounds.ps1
-  - NeoForge: pwsh -File scripts/test_all_neoforge_rounds.ps1
-
+  - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
+  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
+- **Custom Mod Testing:**
+  - Place third-party mod `.jar` files in `test_mods/fabric/` or `test_mods/neoforge/`.
+  - Jars are automatically copied to test instances and tested against vanilla servers.
+  - All `.jar` files in `test_mods/` are git-ignored.

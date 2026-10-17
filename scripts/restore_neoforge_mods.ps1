@@ -1,4 +1,14 @@
-$targetModsDir = 'C:\Users\Mr712\AppData\Roaming\ATLauncher\instances\Minecraft121withNeoForge\mods'
+$projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
+$userHome = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::UserProfile)
+$usersDir = if ($env:ATLAUNCHER_DIR) { $env:ATLAUNCHER_DIR } elseif ($env:APPDATA -and (Test-Path "$env:APPDATA\ATLauncher")) { "$env:APPDATA\ATLauncher" } else { "$userHome/.local/share/atlauncher" }
+$propsPath = "$projectRoot/gradle.properties"
+$McVersion = "1.21"
+if (Test-Path $propsPath) {
+    $line = Get-Content $propsPath | Select-String "minecraft_version=" | Select-Object -First 1
+    if ($line) { $McVersion = $line.Line.Split("=")[1].Trim() }
+}
+$instanceName = "Minecraft$($McVersion.Replace('.', ''))withNeoForge"
+$targetModsDir = Join-Path $usersDir "instances/$instanceName/mods"
 $testMods = @(
     'entity_texture_features-7.2.6-1.21-neoforge.jar',
     'CustomPlayerModels-1.21-0.6.27a.jar',
