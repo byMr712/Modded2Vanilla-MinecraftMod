@@ -1,3 +1,7 @@
+param(
+    [string]$Server = "example-server.com"
+)
+
 $neoforgeMods = @(
     @{ Round=1; File="appleskin-neoforge-mc1.21-3.0.9.jar"; Desc="AppleSkin (HUD/Food sync)" },
     @{ Round=2; File="xaerominimap-neoforge-1.21.1-26.6.0.jar"; Desc="Xaero's Minimap (Custom payload channels)" },
@@ -72,7 +76,7 @@ for ($r = 1; $r -le 10; $r++) {
     Get-ChildItem $targetModsDir -Filter "*.jar" | ForEach-Object { Write-Output "  - $($_.Name)" }
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "scripts/run_neoforge_test.ps1" -Server "hub.opblocks.com" -TimeoutSeconds 45
+    & pwsh -ExecutionPolicy Bypass -File "scripts/run_neoforge_test.ps1" -Server $Server -TimeoutSeconds 45
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
