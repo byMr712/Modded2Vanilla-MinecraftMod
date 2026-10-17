@@ -103,14 +103,15 @@ Each branch includes automated client tests verifying handshake, palette snapsho
   ```bash
   ./gradlew testFabric
   # Target a custom server:
-  ./gradlew testFabric -Pserver=hub.opblocks.com
+  ./gradlew testFabric -Pserver=example-server.com
   ```
 - **NeoForge test:**
   ```bash
   ./gradlew testNeoForge
   # Target a custom server:
-  ./gradlew testNeoForge -Pserver=hub.opblocks.com
+  ./gradlew testNeoForge -Pserver=example-server.com
   ```
+  *Note:* Requires ATLauncher with a `Minecraft<version>withNeoForge` instance, or `ATLAUNCHER_DIR` environment variable.
 - **Full 10-round progressive test suites:**
   - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
   - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
