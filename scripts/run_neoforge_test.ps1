@@ -62,17 +62,31 @@ if (-not (Test-Path $instanceDir)) {
 $instanceModsDir = Join-Path $instanceDir "mods"
 $testModsNeo = Join-Path $projectRoot "test_mods/neoforge"
 
-# Automatically copy any custom test mods provided in test_mods/neoforge
-if (Test-Path $testModsNeo) {
-    $customMods = Get-ChildItem $testModsNeo -Filter "*.jar" -ErrorAction SilentlyContinue
+# Clean stale third-party mods, keeping MrModded2Vanilla
+if (Test-Path $instanceModsDir) {
+    Get-ChildItem "$instanceModsDir/*.jar" -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -notmatch "MrModded2Vanilla" } |
+        Remove-Item -Force -ErrorAction SilentlyContinue
+} else {
+    New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
+}
+
+# Automatically copy custom test mods provided in test_mods/<version>/neoforge or test_mods/neoforge
+$modsSourceNeo = if (Test-Path "$projectRoot/test_mods/$McVersion/neoforge") {
+    "$projectRoot/test_mods/$McVersion/neoforge"
+} elseif (Test-Path $testModsNeo) {
+    $testModsNeo
+} else {
+    $null
+}
+
+if ($modsSourceNeo) {
+    $customMods = Get-ChildItem $modsSourceNeo -Filter "*.jar" -ErrorAction SilentlyContinue
     if ($customMods.Count -gt 0) {
-        if (-not (Test-Path $instanceModsDir)) {
-            New-Item -ItemType Directory -Force -Path $instanceModsDir | Out-Null
-        }
         foreach ($m in $customMods) {
             Copy-Item $m.FullName -Destination $instanceModsDir -Force
         }
-        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from test_mods/neoforge into NeoForge instance mods folder"
+        Write-Output "==> Loaded $($customMods.Count) custom mod(s) from $modsSourceNeo into NeoForge instance mods folder"
     }
 }
 
@@ -91,11 +105,37 @@ if (Test-Path $jsonPath) {
     $mcVer = if ($McVersion) { $McVersion } else { $json.id }
     $sep = if ($isWin) { ";" } else { ":" }
 
-    $cpList = @()
+    $libMap = [ordered]@{}
     foreach ($lib in $json.libraries) {
+        if ($lib.name) {
+            if ($lib.rules) {
+                $allow = $true
+                foreach ($rule in $lib.rules) {
+                    if ($rule.action -eq "allow" -and $rule.os) {
+                        if ($rule.os.name -eq "osx" -and $isWin) { $allow = $false }
+                        if ($rule.os.name -eq "linux" -and $isWin) { $allow = $false }
+                        if ($rule.os.name -eq "windows" -and -not $isWin) { $allow = $false }
+                    }
+                    if ($rule.action -eq "disallow" -and $rule.os) {
+                        if ($rule.os.name -eq "windows" -and $isWin) { $allow = $false }
+                    }
+                }
+                if (-not $allow) { continue }
+            }
+            $parts = $lib.name.Split(':')
+            if ($parts.Count -ge 2) {
+                $classifier = if ($parts.Count -ge 4) { $parts[3] } else { "" }
+                $key = "$($parts[0]):$($parts[1]):$classifier"
+                $libMap[$key] = $lib
+            }
+        }
+    }
+
+    $cpList = @()
+    foreach ($lib in $libMap.Values) {
         if ($lib.downloads.artifact.path) {
-            # Skip old vanilla ASM jars that conflict with NeoForge's modular ASM
-            if ($lib.downloads.artifact.path -match "org/ow2/asm/.*9\.[0-6]") {
+            # Skip modular bootstrap jars that are passed via -p / module-path
+            if ($lib.downloads.artifact.path -match "org/ow2/asm|securejarhandler|bootstraplauncher|JarJarFileSystems") {
                 continue
             }
             $p = Join-Path "$usersDir\libraries" $lib.downloads.artifact.path
@@ -151,7 +191,10 @@ if (Test-Path $jsonPath) {
     }
 
     $resolvedArgs = $jvmArgs + $gameArgs
-    if ($env:JAVA_HOME) {
+    $bundledJava = Join-Path $usersDir "runtimes/minecraft/java-runtime-delta/windows-x64/java-runtime-delta/bin/java.exe"
+    if (Test-Path $bundledJava) {
+        $javaExe = $bundledJava
+    } elseif ($env:JAVA_HOME) {
         $candidate = if ($isWin) { Join-Path $env:JAVA_HOME "bin/java.exe" } else { Join-Path $env:JAVA_HOME "bin/java" }
         if (Test-Path $candidate) { $javaExe = $candidate }
     }
