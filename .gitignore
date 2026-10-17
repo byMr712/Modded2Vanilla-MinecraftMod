@@ -10,4 +10,5 @@ out/
 *.DS_Store
 run/
 
-test_mods/
+test_mods/**/*.jar
+test_mods/*.jar
