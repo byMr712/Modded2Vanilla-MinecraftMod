@@ -121,7 +121,7 @@ foreach ($roundItem in $rounds) {
     Get-ChildItem $targetModsDir -Filter "*.jar" -ErrorAction SilentlyContinue | ForEach-Object { Write-Output "  - $($_.Name)" }
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_neoforge_test.ps1" -Server $Server -TimeoutSeconds 45
+    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_neoforge_test.ps1" -Server $Server -TimeoutSeconds 45 -SkipModCopy
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
