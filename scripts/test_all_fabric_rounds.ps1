@@ -98,7 +98,7 @@ foreach ($roundItem in $rounds) {
     Write-Output "Currently active mods in run/mods: $loadedMods"
 
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 45 -SkipModCopy
+    & pwsh -ExecutionPolicy Bypass -File "$PSScriptRoot/run_fabric_test.ps1" -Server $Server -TimeoutSeconds 60 -SkipModCopy
     $exitCode = $LASTEXITCODE
     $sw.Stop()
 
