@@ -1,9 +1,9 @@
 package com.mr712.modded2vanilla.state;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.Set;
 
@@ -21,19 +21,17 @@ public final class IsolatorState {
         if (forceEnabled) {
             return true;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) {
             return false;
         }
-        // In singleplayer, all mods and modded blocks remain completely functional
-        if (client.isInSingleplayer()) {
+        if (client.hasSingleplayerServer()) {
             return false;
         }
-        ClientPlayNetworkHandler networkHandler = client.getNetworkHandler();
+        ClientPacketListener networkHandler = client.getConnection();
         if (networkHandler == null) {
             return false;
         }
-        // In multiplayer, isolate vanilla registries and entity metadata from mod pollution
         return true;
     }
 
@@ -42,16 +40,16 @@ public final class IsolatorState {
     }
 
     public static boolean isSingleplayer() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client != null && client.isInSingleplayer();
+        Minecraft client = Minecraft.getInstance();
+        return client != null && client.hasSingleplayerServer();
     }
 
     public static boolean isMultiplayer() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client != null && !client.isInSingleplayer() && client.getNetworkHandler() != null;
+        Minecraft client = Minecraft.getInstance();
+        return client != null && !client.hasSingleplayerServer() && client.getConnection() != null;
     }
 
-    public static boolean isChannelSupportedByServer(Identifier channelId) {
+    public static boolean isChannelSupportedByServer(ResourceLocation channelId) {
         if (channelId == null || "minecraft".equals(channelId.getNamespace())) {
             return true;
         }
@@ -80,8 +78,11 @@ public final class IsolatorState {
             Set<?> sendable = (Set<?>) cpn.getMethod("getSendable").invoke(null);
             if (sendable != null && !sendable.isEmpty()) {
                 for (Object idObj : sendable) {
-                    if (idObj != null && !"minecraft".equals(idObj.toString().split(":")[0])) {
-                        return true;
+                    if (idObj != null) {
+                        String idStr = idObj.toString();
+                        if (!idStr.startsWith("minecraft:")) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -91,17 +92,17 @@ public final class IsolatorState {
     }
 
     public static String getServerBrand() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client == null || client.getNetworkHandler() == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client == null || client.getConnection() == null) {
             return "unknown";
         }
-        String brand = client.getNetworkHandler().getBrand();
+        String brand = client.getConnection().serverBrand();
         return brand != null ? brand : "unknown";
     }
 
-    public static ServerInfo getCurrentServerEntry() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        return client != null ? client.getCurrentServerEntry() : null;
+    public static ServerData getCurrentServerEntry() {
+        Minecraft client = Minecraft.getInstance();
+        return client != null ? client.getCurrentServer() : null;
     }
 
     public static void setForceEnabled(boolean enabled) {
@@ -112,4 +113,3 @@ public final class IsolatorState {
         forceDisabled = disabled;
     }
 }
-

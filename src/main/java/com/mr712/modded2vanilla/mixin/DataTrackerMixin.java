@@ -3,11 +3,11 @@ package com.mr712.modded2vanilla.mixin;
 import com.mr712.modded2vanilla.MrModded2Vanilla;
 import com.mr712.modded2vanilla.state.IsolatorState;
 import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.data.DataTracked;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandler;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializer;
+import net.minecraft.network.syncher.SyncedDataHolder;
+import net.minecraft.network.syncher.SynchedEntityData;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -18,17 +18,19 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.List;
 import java.util.Objects;
 
-@Mixin(DataTracker.class)
+@Mixin(SynchedEntityData.class)
 public abstract class DataTrackerMixin {
     @Shadow
-    private DataTracked trackedEntity;
+    @Final
+    private SyncedDataHolder entity;
 
     @Shadow
-    private DataTracker.Entry<?>[] entries;
+    @Final
+    private SynchedEntityData.DataItem<?>[] itemsById;
 
-    @Inject(method = "registerData", at = @At("HEAD"))
-    private static <T> void mrModded2Vanilla$onRegisterData(
-        Class<? extends Entity> entityClass, TrackedDataHandler<T> dataHandler, CallbackInfoReturnable<TrackedData<T>> cir
+    @Inject(method = "defineId", at = @At("HEAD"))
+    private static <T> void mrModded2Vanilla$onDefineId(
+        Class<? extends SyncedDataHolder> entityClass, EntityDataSerializer<T> dataHandler, CallbackInfoReturnable<EntityDataAccessor<T>> cir
     ) {
         if (entityClass != null && entityClass.getName().startsWith("net.minecraft.")) {
             StackTraceElement[] stack = Thread.currentThread().getStackTrace();
@@ -42,9 +44,9 @@ public abstract class DataTrackerMixin {
         }
     }
 
-    @Inject(method = "writeUpdatedEntries", at = @At("HEAD"), cancellable = true)
-    private void mrModded2Vanilla$safeWriteUpdatedEntries(
-        List<DataTracker.SerializedEntry<?>> list, CallbackInfo ci
+    @Inject(method = "assignValues", at = @At("HEAD"), cancellable = true)
+    private void mrModded2Vanilla$safeAssignValues(
+        List<SynchedEntityData.DataValue<?>> list, CallbackInfo ci
     ) {
         if (list == null || list.isEmpty()) {
             ci.cancel();
@@ -58,97 +60,97 @@ public abstract class DataTrackerMixin {
 
         ci.cancel();
 
-        if (this.entries == null || this.entries.length == 0) {
+        if (this.itemsById == null || this.itemsById.length == 0) {
             return;
         }
 
-        for (final DataTracker.SerializedEntry<?> serializedEntry : list) {
+        for (final SynchedEntityData.DataValue<?> serializedEntry : list) {
             if (serializedEntry == null) {
                 continue;
             }
 
             final int rawId = serializedEntry.id();
-            final DataTracker.Entry<?> targetEntry = resolveMatchingEntry(rawId, serializedEntry);
+            final SynchedEntityData.DataItem<?> targetEntry = resolveMatchingEntry(rawId, serializedEntry);
 
             if (targetEntry != null) {
-                if (targetEntry.getData() != null && targetEntry.getData().id() != rawId && this.trackedEntity != null) {
-                    AdjustmentTracker.recordClass(this.trackedEntity.getClass());
+                if (targetEntry.getAccessor() != null && targetEntry.getAccessor().id() != rawId && this.entity != null) {
+                    AdjustmentTracker.recordClass(this.entity.getClass());
                 }
                 try {
                     copySafely(targetEntry, serializedEntry);
-                    if (this.trackedEntity != null) {
-                        this.trackedEntity.onTrackedDataSet(targetEntry.getData());
+                    if (this.entity != null) {
+                        this.entity.onSyncedDataUpdated(targetEntry.getAccessor());
                     }
                 } catch (Throwable t) {
                     MrModded2Vanilla.LOGGER.debug(
                         "[MrModded2Vanilla] Handled data update exception for entity {}: {}",
-                        this.trackedEntity, t.getMessage()
+                        this.entity, t.getMessage()
                     );
                 }
             } else {
-                if (this.trackedEntity != null) {
-                    AdjustmentTracker.recordClass(this.trackedEntity.getClass());
+                if (this.entity != null) {
+                    AdjustmentTracker.recordClass(this.entity.getClass());
                 }
                 MrModded2Vanilla.LOGGER.debug(
                     "[MrModded2Vanilla] Suppressed unresolvable tracked entry id {} for entity {}",
-                    rawId, this.trackedEntity
+                    rawId, this.entity
                 );
             }
         }
 
-        if (this.trackedEntity != null) {
+        if (this.entity != null) {
             try {
-                this.trackedEntity.onDataTrackerUpdate(list);
+                this.entity.onSyncedDataUpdated(list);
             } catch (Throwable t) {
                 MrModded2Vanilla.LOGGER.debug(
-                    "[MrModded2Vanilla] Handled onDataTrackerUpdate exception for entity {}: {}",
-                    this.trackedEntity, t.getMessage()
+                    "[MrModded2Vanilla] Handled onSyncedDataUpdated exception for entity {}: {}",
+                    this.entity, t.getMessage()
                 );
             }
         }
     }
 
-    @Inject(method = "copyToFrom", at = @At("HEAD"), cancellable = true, require = 0)
-    private void mrModded2Vanilla$guardCopy(
-        DataTracker.Entry<?> to, DataTracker.SerializedEntry<?> from, CallbackInfo ci
+    @Inject(method = "assignValue", at = @At("HEAD"), cancellable = true, require = 0)
+    private void mrModded2Vanilla$guardAssignValue(
+        SynchedEntityData.DataItem<?> to, SynchedEntityData.DataValue<?> from, CallbackInfo ci
     ) {
         if (!IsolatorState.isCompensatingDataTracker()) {
             return;
         }
-        if (to == null || from == null || !sameHandler(to.getData(), from.handler())) {
-            if (this.trackedEntity != null) {
-                AdjustmentTracker.recordClass(this.trackedEntity.getClass());
+        if (to == null || from == null || !sameHandler(to.getAccessor(), from.serializer())) {
+            if (this.entity != null) {
+                AdjustmentTracker.recordClass(this.entity.getClass());
             }
             MrModded2Vanilla.LOGGER.debug(
                 "[MrModded2Vanilla] Suppressed incompatible entity data update for {}: {}",
-                this.trackedEntity, from
+                this.entity, from
             );
             ci.cancel();
         }
     }
 
-    private DataTracker.Entry<?> resolveMatchingEntry(int rawId, DataTracker.SerializedEntry<?> serializedEntry) {
+    private SynchedEntityData.DataItem<?> resolveMatchingEntry(int rawId, SynchedEntityData.DataValue<?> serializedEntry) {
         // 1. Direct index match
-        if (isValidIndex(rawId) && sameHandler(this.entries[rawId].getData(), serializedEntry.handler())) {
-            return this.entries[rawId];
+        if (isValidIndex(rawId) && sameHandler(this.itemsById[rawId].getAccessor(), serializedEntry.serializer())) {
+            return this.itemsById[rawId];
         }
 
         // 2. Relative offset checks for common modded field shifts (+1, -1, +2, -2, +3, -3)
         final int[] offsets = { 1, -1, 2, -2, 3, -3, 4, -4 };
         for (final int offset : offsets) {
             final int candidate = rawId + offset;
-            if (isValidIndex(candidate) && sameHandler(this.entries[candidate].getData(), serializedEntry.handler())) {
-                return this.entries[candidate];
+            if (isValidIndex(candidate) && sameHandler(this.itemsById[candidate].getAccessor(), serializedEntry.serializer())) {
+                return this.itemsById[candidate];
             }
         }
 
         // 3. Closest matching handler scan
-        DataTracker.Entry<?> bestMatch = null;
+        SynchedEntityData.DataItem<?> bestMatch = null;
         int minDistance = Integer.MAX_VALUE;
 
-        for (int i = 0; i < this.entries.length; i++) {
-            final DataTracker.Entry<?> entry = this.entries[i];
-            if (entry != null && sameHandler(entry.getData(), serializedEntry.handler())) {
+        for (int i = 0; i < this.itemsById.length; i++) {
+            final SynchedEntityData.DataItem<?> entry = this.itemsById[i];
+            if (entry != null && sameHandler(entry.getAccessor(), serializedEntry.serializer())) {
                 int dist = Math.abs(i - rawId);
                 if (dist < minDistance) {
                     minDistance = dist;
@@ -161,17 +163,17 @@ public abstract class DataTrackerMixin {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void copySafely(DataTracker.Entry<T> to, DataTracker.SerializedEntry<?> from) {
-        if (sameHandler(to.getData(), from.handler())) {
-            to.set((T) from.value());
+    private static <T> void copySafely(SynchedEntityData.DataItem<T> to, SynchedEntityData.DataValue<?> from) {
+        if (sameHandler(to.getAccessor(), from.serializer())) {
+            to.setValue((T) from.value());
         }
     }
 
     private boolean isValidIndex(int id) {
-        return id >= 0 && id < this.entries.length && this.entries[id] != null;
+        return id >= 0 && id < this.itemsById.length && this.itemsById[id] != null;
     }
 
-    private static boolean sameHandler(TrackedData<?> data, TrackedDataHandler<?> handler) {
-        return data != null && Objects.equals(data.dataType(), handler);
+    private static boolean sameHandler(EntityDataAccessor<?> data, EntityDataSerializer<?> handler) {
+        return data != null && Objects.equals(data.serializer(), handler);
     }
 }

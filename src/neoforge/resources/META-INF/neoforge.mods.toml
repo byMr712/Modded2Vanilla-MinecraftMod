@@ -8,7 +8,7 @@ modId="modded2vanilla"
 version="${version}"
 displayName="[MR] Modded2Vanilla"
 displayURL="https://github.com/byMr712/Modded2Vanilla-MinecraftMod"
-logoFile="assets/modded2vanilla/icon.png"
+logoFile="icon.png"
 authors="byMr712"
 description='''Universal client-side compatibility layer for Minecraft ${minecraft_version}. Seamlessly play with your favorite client content mods and join any vanilla/Paper/Spigot/ViaFabricPlus multiplayer servers without ID shifts, recipe conflicts, or entity tracker crashes.'''
 

@@ -1,7 +1,7 @@
 package com.mr712.modded2vanilla.isolator;
 
 import com.mr712.modded2vanilla.state.IsolatorState;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Master Universal Vanilla Mechanic Isolator (VanillaMechanicIsolator).

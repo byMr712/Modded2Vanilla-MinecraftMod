@@ -2,7 +2,7 @@ package com.mr712.modded2vanilla.isolator;
 
 import com.mr712.modded2vanilla.component.ComponentSanitizer;
 import com.mr712.modded2vanilla.state.IsolatorState;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Universal inventory isolator for multiplayer servers.

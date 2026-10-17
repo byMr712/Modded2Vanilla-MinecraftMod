@@ -3,9 +3,9 @@ package com.mr712.modded2vanilla.snapshot;
 import com.mr712.modded2vanilla.MrModded2Vanilla;
 import com.mr712.modded2vanilla.state.IsolatorState;
 import it.unimi.dsi.fastutil.objects.Reference2IntOpenHashMap;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 public final class VanillaBlockStateSnapshot {
 
@@ -22,13 +22,13 @@ public final class VanillaBlockStateSnapshot {
         }
         captured = true;
 
-        int size = Block.STATE_IDS.size();
+        int size = Block.BLOCK_STATE_REGISTRY.size();
         VANILLA_STATES = new BlockState[size];
         STATE_TO_RAW_ID = new Reference2IntOpenHashMap<>(size);
         STATE_TO_RAW_ID.defaultReturnValue(-1);
 
         for (int i = 0; i < size; i++) {
-            BlockState state = Block.STATE_IDS.get(i);
+            BlockState state = Block.BLOCK_STATE_REGISTRY.byId(i);
             VANILLA_STATES[i] = state;
             if (state != null) {
                 STATE_TO_RAW_ID.put(state, i);
@@ -39,8 +39,8 @@ public final class VanillaBlockStateSnapshot {
 
     public static BlockState resolveState(int rawId) {
         if (!IsolatorState.isIsolating() || VANILLA_STATES == null) {
-            BlockState normal = Block.STATE_IDS.get(rawId);
-            return normal != null ? normal : Blocks.AIR.getDefaultState();
+            BlockState normal = Block.BLOCK_STATE_REGISTRY.byId(rawId);
+            return normal != null ? normal : Blocks.AIR.defaultBlockState();
         }
 
         if (rawId >= 0 && rawId < VANILLA_STATES.length) {
@@ -50,24 +50,24 @@ public final class VanillaBlockStateSnapshot {
             }
         }
 
-        BlockState fallback = Block.STATE_IDS.get(rawId);
-        return fallback != null ? fallback : Blocks.AIR.getDefaultState();
+        BlockState fallback = Block.BLOCK_STATE_REGISTRY.byId(rawId);
+        return fallback != null ? fallback : Blocks.AIR.defaultBlockState();
     }
 
     public static int getRawId(BlockState state) {
         if (!IsolatorState.isIsolating() || STATE_TO_RAW_ID == null || state == null) {
-            return Block.STATE_IDS.getRawId(state);
+            return Block.BLOCK_STATE_REGISTRY.getId(state);
         }
 
-        int rawId = STATE_TO_RAW_ID.getInt(state);
-        if (rawId >= 0) {
-            return rawId;
+        int canonicalId = STATE_TO_RAW_ID.getInt(state);
+        if (canonicalId != -1) {
+            return canonicalId;
         }
 
-        return Block.STATE_IDS.getRawId(state);
+        return Block.BLOCK_STATE_REGISTRY.getId(state);
     }
 
-    public static int getCanonicalCount() {
-        return VANILLA_STATES != null ? VANILLA_STATES.length : 0;
+    public static boolean isCaptured() {
+        return captured;
     }
 }

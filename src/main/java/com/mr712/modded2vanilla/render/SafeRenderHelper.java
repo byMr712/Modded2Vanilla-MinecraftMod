@@ -1,54 +1,38 @@
 package com.mr712.modded2vanilla.render;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mr712.modded2vanilla.MrModded2Vanilla;
-import com.mr712.modded2vanilla.state.IsolatorState;
 import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.feature.FeatureRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.world.entity.Entity;
 
 public final class SafeRenderHelper {
-
-    private static final Set<String> LOGGED_CRASHING_RENDERERS = Collections.synchronizedSet(new HashSet<>());
 
     private SafeRenderHelper() {
     }
 
-    public static <T extends LivingEntity> void safeRenderFeature(
-        FeatureRenderer<T, ?> featureRenderer,
-        MatrixStack matrices,
-        VertexConsumerProvider vertexConsumers,
-        int light,
-        T entity,
-        float limbAngle,
-        float limbDistance,
-        float tickDelta,
-        float animationProgress,
-        float headYaw,
-        float headPitch
+    public static void safeRenderFeature(
+        RenderLayer<?, ?> layer,
+        PoseStack poseStack,
+        MultiBufferSource bufferSource,
+        int packedLight,
+        Entity entity,
+        float limbSwing,
+        float limbSwingAmount,
+        float partialTick,
+        float ageInTicks,
+        float netHeadYaw,
+        float headPitch,
+        Operation<Void> original
     ) {
-        if (featureRenderer == null) {
-            return;
-        }
-
-        if (!IsolatorState.isIsolating()) {
-            featureRenderer.render(matrices, vertexConsumers, light, entity, limbAngle, limbDistance, tickDelta, animationProgress, headYaw, headPitch);
-            return;
-        }
-
         try {
-            featureRenderer.render(matrices, vertexConsumers, light, entity, limbAngle, limbDistance, tickDelta, animationProgress, headYaw, headPitch);
+            original.call(layer, poseStack, bufferSource, packedLight, entity, limbSwing, limbSwingAmount, partialTick, ageInTicks, netHeadYaw, headPitch);
         } catch (Throwable t) {
-            String className = featureRenderer.getClass().getName();
-            if (LOGGED_CRASHING_RENDERERS.add(className)) {
-                MrModded2Vanilla.LOGGER.warn("[MrModded2Vanilla] Handled crash in FeatureRenderer {}: {}", className, t.getMessage());
-                AdjustmentTracker.recordClassName(className);
-            }
+            String layerClass = layer != null ? layer.getClass().getName() : "UnknownLayer";
+            AdjustmentTracker.recordClassName(layerClass);
+            MrModded2Vanilla.LOGGER.warn("[MrModded2Vanilla] Suppressed rendering crash in layer {}: {}", layerClass, t.getMessage());
         }
     }
 }

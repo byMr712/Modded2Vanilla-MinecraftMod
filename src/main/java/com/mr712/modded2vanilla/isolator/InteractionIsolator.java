@@ -1,8 +1,7 @@
 package com.mr712.modded2vanilla.isolator;
 
 import com.mr712.modded2vanilla.state.IsolatorState;
-import com.mr712.modded2vanilla.tracker.AdjustmentTracker;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.player.LocalPlayer;
 
 /**
  * Universal interaction isolator for multiplayer servers.
@@ -18,7 +17,7 @@ public final class InteractionIsolator {
     private InteractionIsolator() {
     }
 
-    public static double sanitizeBlockInteractionRange(ClientPlayerEntity player, double currentRange) {
+    public static double sanitizeBlockInteractionRange(LocalPlayer player, double currentRange) {
         if (!IsolatorState.isIsolating()) {
             return currentRange;
         }
