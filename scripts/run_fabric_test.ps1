@@ -1,5 +1,5 @@
 param(
-    [string]$Server = "hub.opblocks.com",
+    [string]$Server = "example-server.com",
     [int]$TimeoutSeconds = 40
 )
 
