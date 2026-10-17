@@ -94,6 +94,10 @@ if (Test-Path $jsonPath) {
     $cpList = @()
     foreach ($lib in $json.libraries) {
         if ($lib.downloads.artifact.path) {
+            # Skip old vanilla ASM jars that conflict with NeoForge's modular ASM
+            if ($lib.downloads.artifact.path -match "org/ow2/asm/.*9\.[0-6]") {
+                continue
+            }
             $p = Join-Path "$usersDir\libraries" $lib.downloads.artifact.path
             if (Test-Path $p) {
                 $cpList += $p
