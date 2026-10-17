@@ -129,10 +129,10 @@ def remapIntermediaryJarToMojmap = { File jarFile, String mcVer ->
     def fieldMap = [:]
     tinyFile.eachLine("UTF-8") { line ->
         def t = line.trim().split("\t")
-        if (t[0] == "c" && t.length >= 3 && t[1].startsWith("net/minecraft/class_")) {
-            classMap[t[1]] = t[2]
-            def iParts = t[1].split('\\$')
-            def mParts = t[2].split('\\$')
+        if (t[0] == "c" && t.length >= 4 && t[2].startsWith("net/minecraft/class_")) {
+            classMap[t[2]] = t[3]
+            def iParts = t[2].split('\\$')
+            def mParts = t[3].split('\\$')
             if (iParts.length == mParts.length) {
                 for (int i = 0; i < iParts.length; i++) {
                     def iShort = iParts[i].contains("/") ? iParts[i].substring(iParts[i].lastIndexOf("/") + 1) : iParts[i]
@@ -140,10 +140,10 @@ def remapIntermediaryJarToMojmap = { File jarFile, String mcVer ->
                     shortClassMap[iShort] = mShort
                 }
             }
-        } else if (t[0] == "m" && t.length >= 4 && (t[2].startsWith("method_") || t[2].startsWith("comp_"))) {
-            methodMap[t[2]] = t[3]
-        } else if (t[0] == "f" && t.length >= 4 && t[2].startsWith("field_")) {
-            fieldMap[t[2]] = t[3]
+        } else if (t[0] == "m" && t.length >= 5 && (t[3].startsWith("method_") || t[3].startsWith("comp_"))) {
+            methodMap[t[3]] = t[4]
+        } else if (t[0] == "f" && t.length >= 5 && t[3].startsWith("field_")) {
+            fieldMap[t[3]] = t[4]
         }
     }
 
