@@ -87,3 +87,23 @@ Supporting both Fabric and NeoForge loaders from a single codebase without exter
 - Resulting jars:
   - `build/libs/MrModded2Vanilla-Fabric-1.21-byMr712-v1.0.jar`
   - `build/libs/MrModded2Vanilla-NeoForge-1.21-byMr712-v1.0.jar`.
+
+---
+
+## 6. Automated Testing (Multiplayer Verification)
+Each branch includes automated client tests verifying handshake, palette snapshot, DataTracker isolation, and mixin stability against vanilla servers:
+- **Fabric test:**
+  ```bash
+  ./gradlew testFabric
+  # Target a custom server:
+  ./gradlew testFabric -Pserver=hub.opblocks.com
+  ```
+- **NeoForge test:**
+  ```bash
+  ./gradlew testNeoForge
+  # Target a custom server:
+  ./gradlew testNeoForge -Pserver=hub.opblocks.com
+  ```
+- **Full 10-round progressive test suites:**
+  - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
+  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`

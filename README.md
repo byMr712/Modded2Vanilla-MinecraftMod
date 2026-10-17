@@ -53,6 +53,27 @@ Modded2Vanilla автоматически берет на себя защиту 
 ```
 Собранные файлы для обоих загрузчиков (Fabric и NeoForge) будут находиться в папке `build/libs` и автоматически копироваться в `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
 
+## Автотестирование совместимости
+
+Для быстрой автоматической проверки корректной изоляции модов и подключения к серверу предусмотрены Gradle-задачи:
+- **Fabric:**
+  ```bash
+  ./gradlew testFabric
+  ```
+- **NeoForge:**
+  ```bash
+  ./gradlew testNeoForge
+  ```
+- Вы также можете указать любой сервер для проверки:
+  ```bash
+  ./gradlew testFabric -Pserver=hub.opblocks.com
+  ./gradlew testNeoForge -Pserver=hub.opblocks.com
+  ```
+- Запуск полных 10-раундовых тестов со сложными модами:
+  - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
+  - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
+
+
 ## Авторы и лицензия
 
 - Автор: [Mr712](https://github.com/byMr712)
