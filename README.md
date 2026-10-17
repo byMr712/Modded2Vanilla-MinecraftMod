@@ -53,6 +53,7 @@ Modded2Vanilla автоматически берет на себя защиту 
 ```
 Собранные файлы для обоих загрузчиков (Fabric и NeoForge) будут находиться в папке `build/libs` и автоматически копироваться в `C:\Users\Mr712\Documents\MrModded2Vanilla_all_builds`.
 
+
 ## Авторы и лицензия
 
 - Автор: [Mr712](https://github.com/byMr712)
