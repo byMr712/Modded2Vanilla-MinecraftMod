@@ -51,7 +51,7 @@
 
 ### 2.7 Configuration & Packet Pipeline Isolation (`ClientConnectionMixin` + `ClientPlayNetworkHandlerMixin`)
 - Filters configuration-phase `ServerboundSelectKnownPacks` packets to pure vanilla known packs (`isVanilla()`), eliminating disconnects caused by client-side modpack declarations.
-- Suppresses outgoing `ServerboundCustomPayloadPacket` (and channel registration floods) during both `CONFIGURATION` and `PLAY` network phases unless the target server is explicitly modded or has negotiated those channels, preventing proxy and anti-packet kicks (e.g. FlameCord/Velocity).
+- Suppresses outgoing modded `ServerboundCustomPayloadPacket` and registration packets (`minecraft:register`, `minecraft:unregister`) during both `CONFIGURATION` and `PLAY` network phases unless the target server is explicitly modded (ignoring proxy-only channels like `bungeecord`/`velocity`), preventing proxy kicks (e.g. Waterfall 128 channel limit, FlameCord/Velocity).
 - Safely validates incoming `ClientboundBlockEntityDataPacket` packets to prevent crashes from null or unsupported block entity types.
 - Provides direct in-place component sanitization (`ComponentSanitizer.sanitizeInPlace`) to strip non-minecraft Data Components.
 
