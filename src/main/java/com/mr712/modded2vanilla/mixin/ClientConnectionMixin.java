@@ -50,10 +50,6 @@ public abstract class ClientConnectionMixin {
             return;
         }
 
-        if (!IsolatorState.isIsolating()) {
-            return;
-        }
-
         if (packet instanceof CustomPayloadC2SPacket customPacket) {
             CustomPayload payload = customPacket.payload();
             if (payload != null && payload.getId() != null) {
