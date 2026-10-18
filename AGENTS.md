@@ -1,17 +1,17 @@
-# Developer & Agent Guidelines — MrModded2Vanilla (26.2)
+# Developer & Agent Guidelines — MrModded2Vanilla (26.3)
 
 ## 1. Project Overview & Identity
 - **Mod Name:** MrModded2Vanilla
 - **Display Name in Mod Menu:** `[MR] Modded2Vanilla`
-- **Target Minecraft Version:** 26.2
+- **Target Minecraft Version:** 26.3
 - **Supported Loaders:** Fabric Loader (`0.19.5+` / `>=0.19.5`) and NeoForge (`>=1.0.0`)
 - **Mapping Stack:** Mojang Mappings (Official) via local empty mappings
-- **Fabric API:** `0.161.0+26.2`
-- **Mod Menu:** `20.0.3`
+- **Fabric API:** `0.162.0+26.3` (for Fabric build)
+- **Mod Menu:** `21.0.0`
 - **Java Requirement:** Java 25 LTS
 - **Build Output:**
-  - Fabric: `MrModded2Vanilla-Fabric-26.2-byMr712-v1.0.jar`
-  - NeoForge: `MrModded2Vanilla-NeoForge-26.2-byMr712-v1.0.jar`
+  - Fabric: `MrModded2Vanilla-Fabric-26.3-byMr712-v1.0.jar`
+  - NeoForge: `MrModded2Vanilla-NeoForge-26.3-byMr712-v1.0.jar`
 - **Repository:** https://github.com/byMr712/Modded2Vanilla-MinecraftMod
 - **Author:** [Mr712](https://github.com/byMr712)
 - **License:** Apache-2.0
@@ -51,12 +51,13 @@
 
 ### 2.7 Configuration & Packet Pipeline Isolation (`ClientConnectionMixin` + `ClientPlayNetworkHandlerMixin`)
 - Filters configuration-phase `ServerboundSelectKnownPacks` packets to pure vanilla known packs (`isVanilla()`), eliminating disconnects caused by client-side modpack declarations.
+- Suppresses outgoing `ServerboundCustomPayloadPacket` (and channel registration floods) during both `CONFIGURATION` and `PLAY` network phases unless the target server is explicitly modded or has negotiated those channels, preventing proxy and anti-packet kicks (e.g. FlameCord/Velocity).
 - Safely validates incoming `ClientboundBlockEntityDataPacket` packets to prevent crashes from null or unsupported block entity types.
 - Provides direct in-place component sanitization (`ComponentSanitizer.sanitizeInPlace`) to strip non-minecraft Data Components.
 
 ---
 
-## 3. Version Nuances (Minecraft 26.2)
+## 3. Version Nuances (Minecraft 26.3)
 - **Official Mojang Mappings:** Uses official Mojang namespace directly without Yarn intermediaries (`net.minecraft.world.level.block.Block`, `net.minecraft.network.syncher.SynchedEntityData`, `net.minecraft.client.player.LocalPlayer`).
 - **Java 25 Requirement:** Minecraft 26.x requires Java 25 LTS compiler and runtime.
 - **Identifier Naming:** Mojang mappings in 26.x use `net.minecraft.resources.Identifier` directly.
@@ -64,6 +65,7 @@
 - **SynchedEntityData Storage:** Entity tracker uses `itemsById` array and `DataValue<?>` records instead of legacy entries.
 - **Network Pipeline:** Uses `Connection.send(Packet, ChannelFutureListener, boolean)` and `PacketDecoder.decode`. Custom payload uses `ServerboundCustomPayloadPacket` with `payload().type().id()`.
 - **Render State Pipeline:** Uses `LivingEntityRenderer.submit(S, PoseStack, SubmitNodeCollector, CameraRenderState)` redirecting `RenderLayer.submit`.
+- **Packet Records:** `ClientboundLevelParticlesPacket` is a record in 26.3, accessing particle options via `packet.particle()` instead of `packet.getParticle()`.
 - **Known Packs Pipeline:** Employs `ServerboundSelectKnownPacks` filtering during the network configuration phase.
 
 ---
@@ -92,8 +94,8 @@ Supporting both Fabric and NeoForge loaders from a single codebase without exter
   ./gradlew build
   ```
 - Resulting jars:
-  - `build/libs/MrModded2Vanilla-Fabric-26.2-byMr712-v1.0.jar`
-  - `build/libs/MrModded2Vanilla-NeoForge-26.2-byMr712-v1.0.jar`.
+  - `build/libs/MrModded2Vanilla-Fabric-26.3-byMr712-v1.0.jar`
+  - `build/libs/MrModded2Vanilla-NeoForge-26.3-byMr712-v1.0.jar`
 ---
 
 ## 6. Automated Testing (Multiplayer Verification)
@@ -110,7 +112,7 @@ Each branch includes automated client tests verifying handshake, palette snapsho
   # Target a custom server:
   ./gradlew testNeoForge -Pserver=example-server.com
   ```
-  *Note:* Requires ATLauncher with a `Minecraft262withNeoForge` instance, or `ATLAUNCHER_DIR` environment variable.
+  *Note:* Requires ATLauncher with a `Minecraft263withNeoForge` instance, or `ATLAUNCHER_DIR` environment variable.
 - **Full 10-round progressive test suites:**
   - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
   - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
