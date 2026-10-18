@@ -50,6 +50,16 @@ public abstract class ClientConnectionMixin {
             return;
         }
 
+        if (packet instanceof net.minecraft.network.packet.c2s.play.CommandExecutionC2SPacket cmdPacket) {
+            String cmd = cmdPacket.command();
+            String name = cmd.contains(" ") ? cmd.substring(0, cmd.indexOf(' ')) : cmd;
+            MrModded2Vanilla.LOGGER.info("[MrModded2Vanilla] Outgoing command packet: /{}", name);
+        } else if (packet instanceof net.minecraft.network.packet.c2s.play.ChatCommandSignedC2SPacket signedPacket) {
+            String cmd = signedPacket.command();
+            String name = cmd.contains(" ") ? cmd.substring(0, cmd.indexOf(' ')) : cmd;
+            MrModded2Vanilla.LOGGER.info("[MrModded2Vanilla] Outgoing signed command packet: /{}", name);
+        }
+
         if (packet instanceof CustomPayloadC2SPacket customPacket) {
             CustomPayload payload = customPacket.payload();
             if (payload != null && payload.getId() != null) {

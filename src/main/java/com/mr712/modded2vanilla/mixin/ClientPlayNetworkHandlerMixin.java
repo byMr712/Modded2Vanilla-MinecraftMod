@@ -84,4 +84,25 @@ public abstract class ClientPlayNetworkHandlerMixin {
             ci.cancel();
         }
     }
+
+    @Inject(method = "onOverlayMessage", at = @At("HEAD"))
+    private void mrModded2Vanilla$logOverlayMessage(net.minecraft.network.packet.s2c.play.OverlayMessageS2CPacket packet, CallbackInfo ci) {
+        if (packet != null && packet.text() != null) {
+            MrModded2Vanilla.LOGGER.info("[Server Action Bar] {}", packet.text().getString());
+        }
+    }
+
+    @Inject(method = "onTitle", at = @At("HEAD"))
+    private void mrModded2Vanilla$logTitle(net.minecraft.network.packet.s2c.play.TitleS2CPacket packet, CallbackInfo ci) {
+        if (packet != null && packet.text() != null) {
+            MrModded2Vanilla.LOGGER.info("[Server Title] {}", packet.text().getString());
+        }
+    }
+
+    @Inject(method = "onSubtitle", at = @At("HEAD"))
+    private void mrModded2Vanilla$logSubtitle(net.minecraft.network.packet.s2c.play.SubtitleS2CPacket packet, CallbackInfo ci) {
+        if (packet != null && packet.text() != null) {
+            MrModded2Vanilla.LOGGER.info("[Server Subtitle] {}", packet.text().getString());
+        }
+    }
 }
