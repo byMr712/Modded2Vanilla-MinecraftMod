@@ -10,8 +10,13 @@ import java.util.Set;
 public final class IsolatorState {
     private static volatile boolean forceEnabled = false;
     private static volatile boolean forceDisabled = false;
+    private static volatile boolean lastServerModded = false;
 
     private IsolatorState() {
+    }
+
+    public static void resetSession() {
+        lastServerModded = false;
     }
 
     public static boolean isIsolating() {
@@ -20,6 +25,9 @@ public final class IsolatorState {
         }
         if (forceEnabled) {
             return true;
+        }
+        if (isModdedServer()) {
+            return false;
         }
         Minecraft client = Minecraft.getInstance();
         if (client == null) {
@@ -50,6 +58,10 @@ public final class IsolatorState {
     }
 
     public static boolean isChannelSupportedByServer(ResourceLocation channelId) {
+        return isChannelSupportedByServer(null, channelId);
+    }
+
+    public static boolean isChannelSupportedByServer(Object connection, ResourceLocation channelId) {
         if (channelId == null) {
             return true;
         }
@@ -58,13 +70,13 @@ public final class IsolatorState {
 
         // Never send channel registration packets (minecraft:register / unregister) to non-modded servers (avoids Waterfall/BungeeCord kicks)
         if ("minecraft".equals(namespace) && ("register".equals(path) || "unregister".equals(path))) {
-            return isModdedServer();
+            return isModdedServer(connection);
         }
 
         if ("minecraft".equals(namespace)) {
             return true;
         }
-        if (isModdedServer()) {
+        if (isModdedServer(connection)) {
             return true;
         }
         try {
@@ -126,14 +138,63 @@ public final class IsolatorState {
     }
 
     public static boolean isModdedServer() {
+        return isModdedServer(null);
+    }
+
+    public static boolean isModdedServer(Object connection) {
+        if (lastServerModded) {
+            return true;
+        }
         if (!isMultiplayer()) {
             return false;
         }
+
+        if (connection != null) {
+            try {
+                java.lang.reflect.Method getPacketListener = connection.getClass().getMethod("getPacketListener");
+                Object listener = getPacketListener.invoke(connection);
+                if (listener != null) {
+                    try {
+                        java.lang.reflect.Method getConnType = listener.getClass().getMethod("getConnectionType");
+                        Object connType = getConnType.invoke(listener);
+                        if (connType != null) {
+                            Boolean isNeo = (Boolean) connType.getClass().getMethod("isNeoForge").invoke(connType);
+                            if (Boolean.TRUE.equals(isNeo)) {
+                                lastServerModded = true;
+                                return true;
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+
+            try {
+                Class<?> channelAttrs = Class.forName("net.neoforged.neoforge.network.registration.ChannelAttributes");
+                java.lang.reflect.Method getConnType = channelAttrs.getMethod("getConnectionType", connection.getClass());
+                Object connType = getConnType.invoke(null, connection);
+                if (connType != null) {
+                    Boolean isNeo = (Boolean) connType.getClass().getMethod("isNeoForge").invoke(connType);
+                    if (Boolean.TRUE.equals(isNeo)) {
+                        lastServerModded = true;
+                        return true;
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
         String brand = getServerBrand().toLowerCase();
         if (brand.contains("fabric") || brand.contains("quilt") || brand.contains("forge") || brand.contains("neoforge")) {
+            lastServerModded = true;
             return true;
         }
-        return hasModdedLoaderChannel();
+        if (hasModdedLoaderChannel()) {
+            lastServerModded = true;
+            return true;
+        }
+        return false;
     }
 
     public static String getServerBrand() {
