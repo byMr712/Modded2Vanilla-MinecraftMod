@@ -46,11 +46,14 @@
 - Detects and records any non-system classes and third-party mod JARs that triggered runtime isolation.
 - Emits exactly one formatted notice to the client log upon connecting to a multiplayer server.
 
-### 2.7 Configuration & Packet Pipeline Isolation (ClientConnectionMixin + ClientPlayNetworkHandlerMixin)
-- Filters configuration-phase SelectKnownPacksC2SPacket packets to pure vanilla known packs (isVanilla()), eliminating disconnects caused by client-side modpack declarations.
-- Suppresses outgoing modded CustomPayloadC2SPacket and registration packets (minecraft:register, minecraft:unregister) during both CONFIGURATION and PLAY network phases unless the target server is explicitly modded (ignoring proxy-only channels like bungeecord/velocity), preventing proxy kicks (e.g. Waterfall 128 channel limit, FlameCord/Velocity).
-- Safely validates incoming BlockEntityUpdateS2CPacket packets to prevent crashes from null or unsupported block entity types.
-- Provides direct in-place component sanitization (ComponentSanitizer.sanitizeInPlace) to strip non-minecraft Data Components.
+### 2.7 Configuration & Packet Pipeline Isolation (`ClientConnectionMixin` + `ClientPlayNetworkHandlerMixin`)
+- Filters configuration-phase `ServerboundSelectKnownPacks` / `SelectKnownPacksC2SPacket` packets to pure vanilla known packs (`isVanilla()`) when connecting to vanilla servers, eliminating disconnects caused by client-side modpack declarations.
+- Dynamically detects modded servers (`IsolatorState.isModdedServer`): checks NeoForge connection type via `ChannelAttributes` and listener reflection during configuration, Fabric/Quilt/Forge via server brand and loader channels, and caches the result for the session.
+- Automatically bypasses mechanics and packet isolation (`IsolatorState.isIsolating() == false`) when connecting to modded servers, allowing all modded channels, custom payloads, and abilities to operate natively.
+- On vanilla/proxy servers, suppresses outgoing modded custom payloads and registration packets (`minecraft:register`, `minecraft:unregister`) during both `CONFIGURATION` and `PLAY` network phases, preventing proxy kicks (e.g. Waterfall 128 channel limit, FlameCord/Velocity).
+- Safely validates incoming block entity data packets to prevent crashes from null or unsupported block entity types.
+- Provides direct in-place component sanitization (`ComponentSanitizer.sanitizeInPlace`) to strip non-minecraft Data Components.
+- Automatically resets cached session state (`IsolatorState.resetSession()`) on disconnect or level clear (`clearLevel`).
 ---
 
 ## 3. Version Nuances (Minecraft 1.21.1)
