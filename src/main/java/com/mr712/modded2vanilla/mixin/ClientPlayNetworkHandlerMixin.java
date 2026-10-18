@@ -28,6 +28,7 @@ public abstract class ClientPlayNetworkHandlerMixin {
     @Inject(method = "clearLevel", at = @At("HEAD"))
     private void mrModded2Vanilla$onClearWorld(CallbackInfo ci) {
         AdjustmentTracker.resetSessionNotice();
+        IsolatorState.resetSession();
     }
 
     @Inject(method = "handleOpenScreen", at = @At("HEAD"), cancellable = true)
