@@ -2,7 +2,8 @@ param(
     [string]$Server = "example-server.com",
     [string]$McVersion = "",
     [int]$TimeoutSeconds = 40,
-    [switch]$SkipModCopy
+    [switch]$SkipModCopy,
+    [switch]$WaitForJoin
 )
 
 $projectRoot = (Resolve-Path "$PSScriptRoot/..").Path
@@ -311,10 +312,15 @@ while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds -and -not $proc.HasExited) {
             $errorDetails = $Matches[0]
             break
         }
-        if ($rawLog -match "Connecting to $Server|Captured pure vanilla block state snapshot") {
+        $targetSig = if ($WaitForJoin) {
+            "Connecting to $($Server.Replace(':', ', '))|Connecting to $Server|Connected to the server|Joined the game|Loaded \d+ recipes"
+        } else {
+            "Connecting to $Server|Captured pure vanilla block state snapshot"
+        }
+        if ($rawLog -match $targetSig) {
             $success = $true
             Write-Output "==> Success signature detected: $($Matches[0])"
-            Start-Sleep -Seconds 3
+            Start-Sleep -Seconds 5
             break
         }
     }
