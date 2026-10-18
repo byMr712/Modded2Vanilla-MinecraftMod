@@ -48,22 +48,34 @@ public final class IsolatorState {
 
     public static boolean isMultiplayer() {
         MinecraftClient client = MinecraftClient.getInstance();
-        return client != null && !client.isInSingleplayer() && client.getNetworkHandler() != null;
+        return client != null && !client.isInSingleplayer();
     }
 
     public static boolean isChannelSupportedByServer(Identifier channelId) {
-        if (channelId == null || "minecraft".equals(channelId.getNamespace())) {
+        if (channelId == null) {
+            return true;
+        }
+        if ("minecraft".equals(channelId.getNamespace()) && !"register".equals(channelId.getPath()) && !"unregister".equals(channelId.getPath())) {
             return true;
         }
         if (isModdedServer()) {
             return true;
         }
         try {
-            Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
-            return (boolean) cpn.getMethod("canSend", channelId.getClass()).invoke(null, channelId);
+            Class<?> ccn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking");
+            if ((boolean) ccn.getMethod("canSend", channelId.getClass()).invoke(null, channelId)) {
+                return true;
+            }
         } catch (Throwable ignored) {
-            return false;
         }
+        try {
+            Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
+            if ((boolean) cpn.getMethod("canSend", channelId.getClass()).invoke(null, channelId)) {
+                return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     public static boolean isModdedServer() {
@@ -80,6 +92,19 @@ public final class IsolatorState {
             Set<?> sendable = (Set<?>) cpn.getMethod("getSendable").invoke(null);
             if (sendable != null && !sendable.isEmpty()) {
                 for (Object idObj : sendable) {
+                    if (idObj != null && !"minecraft".equals(idObj.toString().split(":")[0])) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            Class<?> ccn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientConfigurationNetworking");
+            @SuppressWarnings("unchecked")
+            Set<?> sendableConfig = (Set<?>) ccn.getMethod("getSendable").invoke(null);
+            if (sendableConfig != null && !sendableConfig.isEmpty()) {
+                for (Object idObj : sendableConfig) {
                     if (idObj != null && !"minecraft".equals(idObj.toString().split(":")[0])) {
                         return true;
                     }
