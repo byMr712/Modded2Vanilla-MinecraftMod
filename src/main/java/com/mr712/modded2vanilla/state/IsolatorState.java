@@ -53,7 +53,15 @@ public final class IsolatorState {
         if (channelId == null) {
             return true;
         }
-        if ("minecraft".equals(channelId.getNamespace()) && !"register".equals(channelId.getPath()) && !"unregister".equals(channelId.getPath())) {
+        String namespace = channelId.getNamespace();
+        String path = channelId.getPath();
+
+        // Never send channel registration packets (minecraft:register / unregister) to non-modded servers (avoids Waterfall/BungeeCord kicks)
+        if ("minecraft".equals(namespace) && ("register".equals(path) || "unregister".equals(path))) {
+            return isModdedServer();
+        }
+
+        if ("minecraft".equals(namespace)) {
             return true;
         }
         if (isModdedServer()) {
@@ -76,25 +84,26 @@ public final class IsolatorState {
         return false;
     }
 
-    public static boolean isModdedServer() {
-        if (!isMultiplayer()) {
+    private static boolean isModdedNamespace(String namespace) {
+        if (namespace == null) {
             return false;
         }
-        String brand = getServerBrand().toLowerCase();
-        if (brand.contains("fabric") || brand.contains("quilt") || brand.contains("forge") || brand.contains("neoforge")) {
-            return true;
-        }
+        String ns = namespace.toLowerCase();
+        return ns.equals("fabric") || ns.startsWith("fabric-")
+            || ns.equals("quilt") || ns.startsWith("quilt-")
+            || ns.equals("forge") || ns.startsWith("forge-")
+            || ns.equals("neoforge") || ns.startsWith("neoforge-");
+    }
+
+    private static boolean hasModdedLoaderChannel() {
         try {
             Class<?> cpn = Class.forName("net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking");
             @SuppressWarnings("unchecked")
             Set<?> sendable = (Set<?>) cpn.getMethod("getSendable").invoke(null);
             if (sendable != null && !sendable.isEmpty()) {
                 for (Object idObj : sendable) {
-                    if (idObj != null) {
-                        String idStr = idObj.toString();
-                        if (!idStr.startsWith("minecraft:")) {
-                            return true;
-                        }
+                    if (idObj != null && isModdedNamespace(idObj.toString().split(":")[0])) {
+                        return true;
                     }
                 }
             }
@@ -106,17 +115,25 @@ public final class IsolatorState {
             Set<?> sendableConfig = (Set<?>) ccn.getMethod("getSendable").invoke(null);
             if (sendableConfig != null && !sendableConfig.isEmpty()) {
                 for (Object idObj : sendableConfig) {
-                    if (idObj != null) {
-                        String idStr = idObj.toString();
-                        if (!idStr.startsWith("minecraft:")) {
-                            return true;
-                        }
+                    if (idObj != null && isModdedNamespace(idObj.toString().split(":")[0])) {
+                        return true;
                     }
                 }
             }
         } catch (Throwable ignored) {
         }
         return false;
+    }
+
+    public static boolean isModdedServer() {
+        if (!isMultiplayer()) {
+            return false;
+        }
+        String brand = getServerBrand().toLowerCase();
+        if (brand.contains("fabric") || brand.contains("quilt") || brand.contains("forge") || brand.contains("neoforge")) {
+            return true;
+        }
+        return hasModdedLoaderChannel();
     }
 
     public static String getServerBrand() {
