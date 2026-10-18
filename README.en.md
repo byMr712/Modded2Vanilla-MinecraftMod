@@ -32,9 +32,9 @@ MrModded2Vanilla automatically protects your multiplayer connection and prevents
 
 The mod requires zero manual setup and adjusts its behavior automatically:
 
-- Singleplayer: isolation is disabled, all your mods, blocks, items, and custom features work completely normally.
-- Standard multiplayer: isolation activates to provide a clean, crash-free vanilla connection.
-- Modded multiplayer: mods supported by the server synchronize naturally.
+- Singleplayer: isolation is disabled, allowing all your mods, blocks, items, and custom features to work normally.
+- Standard/vanilla multiplayer: isolation automatically activates to provide a clean, crash-free vanilla connection.
+- Modded multiplayer (Fabric, NeoForge, Forge): automatically detects server-side mod support, bypasses vanilla constraints, and lets modded channels and mechanics communicate freely.
 
 ## Installation
 
