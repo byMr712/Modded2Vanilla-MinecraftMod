@@ -55,7 +55,7 @@ public abstract class ClientConnectionMixin {
             if (payload != null && payload.type() != null) {
                 Identifier channelId = payload.type().id();
                 if (channelId != null && !IsolatorState.isChannelSupportedByServer(channelId)) {
-                    MrModded2Vanilla.LOGGER.debug("[MrModded2Vanilla] Suppressed unsupported outgoing CustomPayload channel: {}", channelId);
+                    MrModded2Vanilla.LOGGER.info("[MrModded2Vanilla] Suppressed unsupported outgoing CustomPayload channel: {}", channelId);
                     AdjustmentTracker.recordMod(channelId.getNamespace());
                     ci.cancel();
                 }
