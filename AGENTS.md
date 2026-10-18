@@ -1,16 +1,16 @@
-# Developer & Agent Guidelines — MrModded2Vanilla (1.21.11)
+# Developer & Agent Guidelines — MrModded2Vanilla (1.21.1)
 
 ## 1. Project Overview & Identity
 - **Mod Name:** MrModded2Vanilla
 - **Display Name in Mod Menu:** `[MR] Modded2Vanilla`
-- **Target Minecraft Version:** 1.21.11
+- **Target Minecraft Version:** 1.21.1
 - **Supported Loaders:** Fabric Loader (`0.19.5+` / `>=0.19.5`) and NeoForge (`>=1.0.0`)
-- **Mapping Stack:** Yarn `1.21.11+build.6:v2`
-- **Fabric API:** `0.141.6+1.21.11`
+- **Mapping Stack:** Yarn `1.21.1+build.3:v2`
+- **Fabric API:** `0.116.17+1.21.1`
 - **Java Requirement:** Java 21 LTS
 - **Build Output:**
-  - Fabric: `MrModded2Vanilla-Fabric-1.21.11-byMr712-v1.0.jar`
-  - NeoForge: `MrModded2Vanilla-NeoForge-1.21.11-byMr712-v1.0.jar`
+  - Fabric: `MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`
+  - NeoForge: `MrModded2Vanilla-NeoForge-1.21.1-byMr712-v1.0.jar`
 - **Repository:** https://github.com/byMr712/Modded2Vanilla-MinecraftMod
 - **Author:** [Mr712](https://github.com/byMr712)
 - **License:** Apache-2.0
@@ -46,20 +46,18 @@
 - Detects and records any non-system classes and third-party mod JARs that triggered runtime isolation.
 - Emits exactly one formatted notice to the client log upon connecting to a multiplayer server.
 
-### 2.7 Configuration & Packet Pipeline Isolation (`ClientConnectionMixin` + `ClientPlayNetworkHandlerMixin`)
-- Filters configuration-phase `SelectKnownPacksC2SPacket` packets to pure vanilla known packs (`isVanilla()`), eliminating disconnects caused by client-side modpack declarations.
-- Safely validates incoming `BlockEntityUpdateS2CPacket` packets to prevent crashes from null or unsupported block entity types.
-- Provides direct in-place component sanitization (`ComponentSanitizer.sanitizeInPlace`) to strip non-minecraft Data Components.
-
+### 2.7 Configuration & Packet Pipeline Isolation (ClientConnectionMixin + ClientPlayNetworkHandlerMixin)
+- Filters configuration-phase SelectKnownPacksC2SPacket packets to pure vanilla known packs (isVanilla()), eliminating disconnects caused by client-side modpack declarations.
+- Suppresses outgoing CustomPayloadC2SPacket (and channel registration floods) during both CONFIGURATION and PLAY network phases unless the target server is explicitly modded or has negotiated those channels, preventing proxy and anti-packet kicks (e.g. FlameCord/Velocity).
+- Safely validates incoming BlockEntityUpdateS2CPacket packets to prevent crashes from null or unsupported block entity types.
+- Provides direct in-place component sanitization (ComponentSanitizer.sanitizeInPlace) to strip non-minecraft Data Components.
 ---
 
-## 3. Version Nuances (Minecraft 1.21.11)
+## 3. Version Nuances (Minecraft 1.21.1)
 - **Known Packs Pipeline:** Employs `SelectKnownPacksC2SPacket` filtering during the network configuration phase.
-- **NetworkState Architecture:** `NetworkState` moved to package `net.minecraft.network.state.NetworkState`.
-- **Network Packet Dispatch:** `ClientConnection.send` uses Netty `ChannelFutureListener` instead of legacy `PacketCallbacks`.
-- **Render State Architecture:** Minecraft 1.21.11 utilizes `LivingEntityRenderState` with `OrderedRenderCommandQueue` and `CameraRenderState` in `LivingEntityRenderer.render(S, MatrixStack, OrderedRenderCommandQueue, CameraRenderState)`.
-- **Movement Flags:** Movement packets (`PlayerMoveC2SPacket`) include the `horizontalCollision` boolean flag.
-- **Data Components:** Uses the standard 1.20.5+ Data Component system via `Registries.DATA_COMPONENT_TYPE` and `ItemStack.getComponents()`.
+- **Entity Rendering Pipeline:** Minecraft 1.21.1 renders entities directly via `LivingEntityRenderer.render(T, float, float, MatrixStack, VertexConsumerProvider, int)` without `LivingEntityRenderState` (which was introduced in 1.21.2).
+- **Feature Rendering:** `FeatureRenderer.render()` accepts individual pose and animation float parameters `(matrices, vertexConsumers, light, entity, limbAngle, limbDistance, tickDelta, animationProgress, headYaw, headPitch)`.
+- **Network Dispatch:** Uses standard Netty `PacketCallbacks` on `ClientConnection.send`.
 - **DataTracker Architecture:** `DataTracker` uses array-based storage `DataTracker.Entry<?>[] entries` and `DataTracked` interface.
 
 ---
@@ -88,8 +86,8 @@ Supporting both Fabric and NeoForge loaders from a single codebase without exter
   ./gradlew build
   ```
 - Resulting jars:
-  - `build/libs/MrModded2Vanilla-Fabric-1.21.11-byMr712-v1.0.jar`
-  - `build/libs/MrModded2Vanilla-NeoForge-1.21.11-byMr712-v1.0.jar`.
+  - `build/libs/MrModded2Vanilla-Fabric-1.21.1-byMr712-v1.0.jar`
+  - `build/libs/MrModded2Vanilla-NeoForge-1.21.1-byMr712-v1.0.jar`.
 ---
 
 ## 6. Automated Testing (Multiplayer Verification)
@@ -106,7 +104,7 @@ Each branch includes automated client tests verifying handshake, palette snapsho
   # Target a custom server:
   ./gradlew testNeoForge -Pserver=example-server.com
   ```
-  *Note:* Requires ATLauncher with a `Minecraft12111withNeoForge` instance, or `ATLAUNCHER_DIR` environment variable.
+  *Note:* Requires ATLauncher with a `Minecraft1211withNeoForge` instance, or `ATLAUNCHER_DIR` environment variable.
 - **Full 10-round progressive test suites:**
   - Fabric: `pwsh -File scripts/test_all_fabric_rounds.ps1`
   - NeoForge: `pwsh -File scripts/test_all_neoforge_rounds.ps1`
