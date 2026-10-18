@@ -38,7 +38,7 @@ public abstract class ClientConnectionMixin {
         }
 
         if (packet instanceof SelectKnownPacksC2SPacket packsPacket) {
-            if (packsPacket.knownPacks() != null) {
+            if (!IsolatorState.isModdedServer(this) && packsPacket.knownPacks() != null) {
                 List<VersionedIdentifier> filtered = packsPacket.knownPacks().stream()
                     .filter(VersionedIdentifier::isVanilla)
                     .toList();
@@ -64,7 +64,7 @@ public abstract class ClientConnectionMixin {
             CustomPayload payload = customPacket.payload();
             if (payload != null && payload.getId() != null) {
                 Identifier channelId = payload.getId().id();
-                if (channelId != null && !IsolatorState.isChannelSupportedByServer(channelId)) {
+                if (channelId != null && !IsolatorState.isChannelSupportedByServer(this, channelId)) {
                     MrModded2Vanilla.LOGGER.info("[MrModded2Vanilla] Suppressed unsupported outgoing CustomPayload channel: {}", channelId);
                     AdjustmentTracker.recordMod(channelId.getNamespace());
                     ci.cancel();
