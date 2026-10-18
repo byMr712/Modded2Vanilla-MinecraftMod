@@ -313,7 +313,7 @@ while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds -and -not $proc.HasExited) {
             break
         }
         $targetSig = if ($WaitForJoin) {
-            "Connecting to $($Server.Replace(':', ', '))|Connecting to $Server|Connected to the server|Joined the game|Loaded \d+ recipes"
+            "ClientPacketListener|Connected to the server|Joined the game|Loaded \d+ recipes|Loading terrain"
         } else {
             "Connecting to $Server|Captured pure vanilla block state snapshot"
         }
